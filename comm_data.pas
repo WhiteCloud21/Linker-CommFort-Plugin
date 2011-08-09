@@ -206,6 +206,8 @@ var
   SERVER_LOCAL: String;
   SERVER_REMOTE: String;
 
+  PLUGIN_FILENAME: String;
+
   StartKey, MultKey, AddKey: Integer;
 
   name_prefix: String;

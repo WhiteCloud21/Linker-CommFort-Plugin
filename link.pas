@@ -831,14 +831,14 @@ begin
        end;
      7: // неверный пароль
        begin
-         {if PCorePlugin^.AskRight(BOT_NAME, 1, '')=1 then
+         if PCorePlugin^.AskRight(BOT_NAME, 1, '')=1 then
          begin
            //PCorePlugin^.AddPassword(BOT_NAME, Name, 0, IniUsers.ReadString('Users',CheckStr(Name2),''));
            PCorePlugin^.RemoveUser(BOT_NAME, Name);
            DataToSend:=WordToStr(LNK_CODE_SERVICE_RESENDMEUSER)+TextToStr(Name2); // сервисное сообщение на другой сервер
            Sock.SendText(DataToSend);
          end
-         else } // Ждем исправления удаления учетки!
+         else
          begin
            DataToSend:=WordToStr(LNK_CODE_SERVICE_CANNOTCONNECT)+TextToStr(Name2); // сервисное сообщение на другой сервер
            Sock.SendText(DataToSend);

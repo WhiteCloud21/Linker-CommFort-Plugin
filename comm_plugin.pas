@@ -47,7 +47,7 @@ var
 begin
   inherited;
   Randomize;
-  config_dir:=ExtractFilePath(ParamStr(0))+'Plugins\'+ExtractFileNameEx(GetDllPath, false);
+  config_dir:=ExtractFilePath(ParamStr(0))+'Plugins\'+PLUGIN_FILENAME;
   if not DirectoryExists(config_dir) then
     CreateDir(config_dir);
 
@@ -446,5 +446,8 @@ begin
       CorePlugin.onError(CorePlugin, e, Str);
   end;
 end;
+
+begin
+	PLUGIN_FILENAME := ExtractFileNameEx(GetDllPath, false);
 
 end.

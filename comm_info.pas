@@ -1329,11 +1329,11 @@ begin
 	try
     if (Length(filename) > 4) and (Copy(filename, Length(filename) - 3, 4) = '.bmp') then
     begin
-      bmp.LoadFromFile(ExtractFilePath(ParamStr(0)) + 'Plugins\Mafia\img\' + filename);
+      bmp.LoadFromFile(ExtractFilePath(ParamStr(0)) + 'Plugins\'+PLUGIN_FILENAME+'\img\' + filename);
       Result.Assign(bmp);
     end
     else
-      Result.LoadFromFile(ExtractFilePath(ParamStr(0)) + 'Plugins\Mafia\img\' + filename);
+      Result.LoadFromFile(ExtractFilePath(ParamStr(0)) + 'Plugins\'+PLUGIN_FILENAME+'\img\' + filename);
   finally
     bmp.Free;
   end;
