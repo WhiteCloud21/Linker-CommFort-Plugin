@@ -130,7 +130,10 @@ destructor TCommPlugin.Destroy;
 begin
   //данная функция вызывается при завершении работы программы
   if Loaded then
+  begin
     Link.Destroy();
+    Loaded := false;
+  end;
   inherited;
 end;
 

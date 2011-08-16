@@ -217,7 +217,7 @@ end;
 
 function StrToDouble(const Str: String; var P: Cardinal): Double;
 begin
-  CopyMemory(@Result, @Str[P], 4);
+  CopyMemory(@Result, @Str[P], 8);
   P:=P+4;
 end;
 

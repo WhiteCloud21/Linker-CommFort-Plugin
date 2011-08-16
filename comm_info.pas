@@ -639,7 +639,7 @@ begin
       i:=i+len*2+4;
       //CommfortProcess(dwPluginID, PM_PLUGIN_SNDMSG_PM, @msg[0], i);
       MsgQueue.InsertMsg(PM_PLUGIN_SNDMSG_PM, msg, i);
-      WriteLog(file_log, Name + ' -> '+User + ' : '+Text);
+      //WriteLog(file_log, Name + ' -> '+User + ' : '+Text);
 end;
 
 procedure TCommPluginC.AddImageToChannel(Name, channel : string; image : TJpegImage);

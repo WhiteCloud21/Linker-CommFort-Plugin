@@ -93,6 +93,9 @@ type
   function Init():Integer;
   procedure Destroy();
 
+const
+	KICK_TIME = 0.00003; // ~2.5s
+
 var
   Sock: TLinkSocket;
   SU: TSendData;
@@ -302,7 +305,7 @@ begin
         Inc(Index);
       end;
       if Flag then
-        PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, 0.0007, UserName, ChannelList[I], 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
+        PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, UserName, ChannelList[I], 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
       end;
   if IniUsers.ReadInteger('Message', CheckStr(UserName), 0)<>2 then
     IniUsers.DeleteKey('Message', CheckStr(UserName));
@@ -634,7 +637,7 @@ begin
             Exit;
           if ChannelList[Icon]='' then
             Exit;
-          PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, 0.0007, Name, ChannelList[Icon], 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
+          PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, Name, ChannelList[Icon], 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
         end;
 
     end;
@@ -784,6 +787,20 @@ begin
      Sock.S.Active:=True;
 end;
 {$ENDIF}
+
+procedure ConnectUser(User: TUser);
+var
+	DataToSend: string;
+begin
+	if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0) = 0) then
+	begin
+		IniUsers.DeleteKey('Message', CheckStr(User.Name));
+    //User := PCorePlugin^.AskUserInfo(User.Name, DataToSend);
+    DataToSend := WordToStr(LNK_CODE_JOIN) + TextToStr(User.Name) + TextToStr(User.IP) + WordToStr(User.sex) + TextToStr(PCorePlugin^.AskID(User.Name));
+    Sock.SendText(DataToSend);
+  end;
+  IniUsers.WriteInteger('Connect', CheckStr(User.Name), 1);
+end;
 
 procedure onAuthFail(Name: String; Reason: Integer);
 var
@@ -990,14 +1007,7 @@ begin
   begin
     if Text='connect' then
     begin
-      if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=0) then
-      begin
-        IniUsers.DeleteKey('Message', CheckStr(User.Name));
-        User:=PCorePlugin^.AskUserInfo(User.Name, DataToSend);
-        DataToSend:=WordToStr(LNK_CODE_JOIN)+TextToStr(User.Name)+TextToStr(User.IP)+WordToStr(User.sex)+TextToStr(PCorePlugin^.AskID(User.Name));
-        Sock.SendText(DataToSend);
-      end;
-      IniUsers.WriteInteger('Connect', CheckStr(User.Name), 1);
+      ConnectUser(User);
       Exit;
     end;
     if Text='disconnect' then
@@ -1072,6 +1082,7 @@ begin
       Num:=I;
   if Num>0 then
   begin
+  	ConnectUser(User);
     if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=1) then
     begin
       DataToSend:=WordToStr(LNK_CODE_JOINCHAN)+TextToStr(User.Name)+WordToStr(Num);
@@ -1079,7 +1090,7 @@ begin
     end
     else
     begin
-      PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, 0.0007, User.Name, Channel, 'Для доступа к каналу необходимо подключиться к серверу '+SERVER_REMOTE);
+      PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, User.Name, Channel, 'Для доступа к каналу необходимо подключиться к серверу '+SERVER_REMOTE);
       PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для подключения к серверу напишите мне "connect"');
     end;
   end;
@@ -1141,7 +1152,7 @@ begin
     end;
     for K := 1 to 16 do
       if ChannelList[K]<>'' then
-        PCorePlugin^.AddChannel(BOT_NAME, ChannelList[K], 0, 1);
+        PCorePlugin^.AddChannel(BOT_NAME, ChannelList[K], 0, 0);
   end
   else
   begin
@@ -1317,7 +1328,7 @@ begin
   end;
   for K := 1 to 16 do
   	if ChannelList[K]<>'' then
-    	PCorePlugin^.AddChannel(BOT_NAME, ChannelList[K], 0, 1);
+    	PCorePlugin^.AddChannel(BOT_NAME, ChannelList[K], 0, 0);
 end;
 
 procedure Destroy();
