@@ -212,13 +212,17 @@ begin
         begin
           msg := TMemoryStream.Create;
           img := TJPEGImage.Create;
-          msg.WriteBuffer(bMessage[I+4], K);
-          msg.Seek(0, soFromBeginning);
-          img.LoadFromStream(msg);
-          msg.Free;
-        	if Assigned(FonPrivImg) then
-        		FonPrivImg(Self, name, user, img);
-          //I:=I+4;
+          try
+          	msg.WriteBuffer(bMessage[I+4], K);
+          	msg.Seek(0, soFromBeginning);
+          	img.LoadFromStream(msg);
+          	msg.Free;
+        		if Assigned(FonPrivImg) then
+        			FonPrivImg(Self, name, user, img);
+          finally
+            msg.Free;
+            img.Free;
+          end;
         end
         else
         	if Assigned(FonPrivMsg) then
@@ -304,13 +308,16 @@ begin
         begin
           msg := TMemoryStream.Create;
           img := TJPEGImage.Create;
-          msg.WriteBuffer(bMessage[I+4], K);
-          msg.Seek(0, soFromBeginning);
-          img.LoadFromStream(msg);
-          msg.Free;
-        	if Assigned(FonPubImg) then
-        		FonPubImg(Self, name, user, channel, img);
-          //I:=I+4;
+          try
+           	msg.WriteBuffer(bMessage[I+4], K);
+          	msg.Seek(0, soFromBeginning);
+          	img.LoadFromStream(msg);
+            if Assigned(FonPubImg) then
+        			FonPubImg(Self, name, user, channel, img);
+          finally
+          	msg.Free;
+            img.Free;
+          end;
         end
         else
         	if Assigned(FonPubMsg) then

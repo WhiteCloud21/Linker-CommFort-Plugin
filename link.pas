@@ -196,7 +196,10 @@ procedure TLinkSocket.ServerSocketClientConnect(Sender: TObject;
   Socket: TCustomWinSocket);
 begin
   if Socket.RemoteAddress<>CONNECT_IP then
+  begin
+  	PCorePlugin^.WriteLog(file_log, 'Denied '+Socket.RemoteAddress);
     Socket.Close;
+  end;
   //Memo1.Lines.Add('Client Connected! '+Socket.RemoteAddress);
 end;
 
@@ -233,15 +236,18 @@ procedure TLinkSocket.ServerSocketClientDisconnect(Sender: TObject;
   Socket: TCustomWinSocket);
 var I: LongInt;
 begin
-  ConnS:=nil;
-  Connected:=False;
-  SU.Timer.Enabled:=False;
-  SU.ListNames.Clear;
-  for I := 0 to VUNames.Count - 1 do
-    PCorePlugin^.LeaveVirtualUser(VUNames[I]);
-  VUNames.Clear;
-  SU.TimerBans.Enabled:=False;
-  PCorePlugin^.AddState(BOT_NAME, '');
+  if (ConnS = Socket) then
+  begin
+  	ConnS:=nil;
+  	Connected:=False;
+  	SU.Timer.Enabled:=False;
+  	SU.ListNames.Clear;
+  	for I := 0 to VUNames.Count - 1 do
+    	PCorePlugin^.LeaveVirtualUser(VUNames[I]);
+  	VUNames.Clear;
+  	SU.TimerBans.Enabled:=False;
+  	PCorePlugin^.AddState(BOT_NAME, '');
+  end;
 end;
 
 {$ELSE}
@@ -416,9 +422,12 @@ begin
           Image:=StrToImg(Str,P);
           if (Image <> nil) then
           begin
-          	PCorePlugin^.AddChannel(name_prefix+Name,Channel,0,0);
-          	PCorePlugin^.AddImageToChannel(name_prefix+Name, Channel, Image);
-            Image.Free;
+          	try
+          		PCorePlugin^.AddChannel(name_prefix+Name,Channel,0,0);
+          		PCorePlugin^.AddImageToChannel(name_prefix+Name, Channel, Image);
+            finally
+            	Image.Free;
+            end;
           end;
         end;
       LNK_CODE_PRIV:
@@ -436,8 +445,11 @@ begin
           Image:=StrToImg(Str,P);
           if (Image <> nil) then
           begin
-          	PCorePlugin^.AddPrivateImage(name_prefix+Name, Channel, Image);
-            Image.Free;
+          	try
+          		PCorePlugin^.AddPrivateImage(name_prefix+Name, Channel, Image);
+            finally
+            	Image.Free;
+            end;
           end;
         end;
       LNK_CODE_PMSG:
@@ -1313,7 +1325,7 @@ begin
   RC:=TReconnect.Create(Sock);
   {$ENDIF}
   SU:=TSendData.Create(Sock);
-  Result:=0;
+  Result:=1;
   AddKey:=0;
   //IniUsers.EraseSection('Message');
   Len:=PCorePlugin^.AskUserChannels(BOT_NAME,Channels);
@@ -1339,6 +1351,7 @@ begin
   {$ENDIF}
   Sock.Free;
   IniUsers.Free;
+  Connected:=False;
 end;
 
 {  procedure ResetTimerQ();

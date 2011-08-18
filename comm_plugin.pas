@@ -257,8 +257,6 @@ begin
     on e: exception do
       CorePlugin.onError(CorePlugin, e, Str);
   end;
-
-  Image.Free;
 end;
 
 // Метод, вызываемый при получении приватного сообщения
@@ -368,7 +366,11 @@ var
   Str: String;
   I: Integer;
 begin
-  if not Loaded then Exit;
+  //if not Loaded then Exit;
+  if not Loaded then begin
+    Link.Init();
+    Loaded:=True;
+  end;
   if Assigned(IgnorePrefixList) then
     for I := 0 to IgnorePrefixList.Count - 1 do
       if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
