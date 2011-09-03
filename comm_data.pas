@@ -185,7 +185,7 @@ const
 
   LNK_CODE_SERVICE_JOINCHANFAIL = 20201;
 
-  PLU_VER  = '0.0.2';
+  PLU_VER  = '0.0.3';
 
   {$IFDEF Server}
   PLU_NAME = 'Линковщик серверов '+PLU_VER+' (сервер)';

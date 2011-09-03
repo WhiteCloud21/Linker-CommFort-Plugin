@@ -175,6 +175,7 @@ begin
     end;
   except Result := False;
   end;
+  SetLength(S, 0);
 end;
 
 {function ReceiveLongText(Socket: TCustomWinSocket; MySProc: TMySProc;

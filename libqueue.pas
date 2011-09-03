@@ -57,16 +57,18 @@ implementation
   var
     P : PMsgList;
   begin
+  	DataAccessCriticalSection.Enter;
+    Timer.Enabled := False;
     Timer.Free;
-    while not DataAccessCriticalSection.TryEnter do ;
-    DataAccessCriticalSection.Free;
     while (Msg<>nil) do
     begin
       P:=Msg;
       Msg:=Msg^.Next;
-      P^.Value:=nil;
+      P^.Value.Free;
       Dispose(P);
     end;
+    DataAccessCriticalSection.Leave;
+    DataAccessCriticalSection.Free;
     inherited;
   end;
 
@@ -160,7 +162,7 @@ implementation
         Msg^.Value.ReadBuffer(PauseTime, 4);
         Timer.Interval:=PauseTime;
         Timer.Enabled:=True;
-        Msg^.Value:=nil;
+        Msg^.Value.Free;
         P:=Msg;
         Msg:=Msg^.Next;
         Dispose(P);

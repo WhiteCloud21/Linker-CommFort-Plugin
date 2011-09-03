@@ -127,6 +127,8 @@ Copyright:   (c) Anatoly Podgoretsky, 1996
 Дата:        26 апреля 2002 г.
 ***************************************************** }
 
+{$R-}
+{$Q-}
 function Encrypt(const InString: string; StartKey, MultKey, AddKey: Integer): string;
 var
   I: Integer;
@@ -138,9 +140,6 @@ begin
     StartKey := (Ord(Result[I]) + StartKey) * MultKey + AddKey;
   end;
 end;
-
-{$R-}
-{$Q-}
 
 { Расшифровка строки
 
@@ -238,11 +237,14 @@ begin
   if Len > 0 then
   begin
   	msg := TMemoryStream.Create;
-    msg.WriteBuffer(Str[P], Len);
-    msg.Seek(0, soBeginning);
-		Result := TJPEGImage.Create;
-    Result.LoadFromStream(msg);
-    msg.Free;
+  	try
+    	msg.WriteBuffer(Str[P], Len);
+    	msg.Seek(0, soBeginning);
+			Result := TJPEGImage.Create;
+    	Result.LoadFromStream(msg);
+    finally
+    	msg.Free;
+    end;
     P:=P + Len div 2 + Len mod 2;
   end
   else

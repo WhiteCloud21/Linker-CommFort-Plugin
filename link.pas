@@ -662,6 +662,7 @@ begin
       PCorePlugin^.onError(PCorePlugin^, e, Text);
     end;
   end;
+  SetLength(Str, 0);
 end;
 
 constructor TSendData.Create(Sock1: TLinkSocket);

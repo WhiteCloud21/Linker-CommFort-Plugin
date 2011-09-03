@@ -216,12 +216,11 @@ begin
           	msg.WriteBuffer(bMessage[I+4], K);
           	msg.Seek(0, soFromBeginning);
           	img.LoadFromStream(msg);
-          	msg.Free;
         		if Assigned(FonPrivImg) then
         			FonPrivImg(Self, name, user, img);
           finally
-            msg.Free;
             img.Free;
+            msg.Free;
           end;
         end
         else
@@ -315,8 +314,8 @@ begin
             if Assigned(FonPubImg) then
         			FonPubImg(Self, name, user, channel, img);
           finally
-          	msg.Free;
             img.Free;
+          	msg.Free;
           end;
         end
         else
@@ -529,7 +528,7 @@ var
   msg: TBytes;
   i, len: DWord;
 begin
-  len:=Length(Name)*2+Length(IP)*2+Length(Pass)*2+20;
+  len:=Length(Name)*2+Length(IP)*2+Length(Pass)*2+Length(CompID)*2+24;
   SetLength(msg, len);
   len:=Length(Name);
   CopyMemory(@msg[0], @len, 4);
@@ -669,6 +668,7 @@ begin
 	image.SaveToStream(msg);
 	stream.Free;
 	MsgQueue.InsertMsg(PM_PLUGIN_SNDIMG_PUB, msg);
+  msg.Free;
 end;
 
 procedure TCommPluginC.AddImageToChannel(Name, channel : string; filename : String);
@@ -710,6 +710,7 @@ begin
 	image.SaveToStream(msg);
 	stream.Free;
 	MsgQueue.InsertMsg(PM_PLUGIN_SNDIMG_PRIV, msg);
+  msg.Free;
 end;
 
 procedure TCommPluginC.AddPrivateImage(Name, User : string; filename : String);
