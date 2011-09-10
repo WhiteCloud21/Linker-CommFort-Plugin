@@ -1,4 +1,4 @@
-{$DEFINE Server}
+//{$DEFINE Server}
 unit comm_data;
 
 interface

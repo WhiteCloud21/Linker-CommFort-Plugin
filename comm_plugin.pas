@@ -46,65 +46,66 @@ var
   StrList: TStringList;
 begin
   inherited;
-  Randomize;
-  config_dir:=ExtractFilePath(ParamStr(0))+'Plugins\'+PLUGIN_FILENAME;
-  if not DirectoryExists(config_dir) then
-    CreateDir(config_dir);
+  try
+    Randomize;
+    config_dir:=ExtractFilePath(ParamStr(0))+'Plugins\'+PLUGIN_FILENAME;
+    if not DirectoryExists(config_dir) then
+      CreateDir(config_dir);
 
-  StrList:=TStringList.Create;
-  StrList.Add(';Файл автоматически создан '+DateTimeToStr(Now));
-  file_config:=config_dir+'\config.ini';
-  file_users:=config_dir+'\users.ini';
-  file_log:=config_dir+'\error.log';
-  if not FileExists(file_log) then
-    StrList.SaveToFile(file_log, TEncoding.Unicode);
-  if not FileExists(file_users) then
-    StrList.SaveToFile(file_users, TEncoding.Unicode);
+    StrList:=TStringList.Create;
+    StrList.Add(';Файл автоматически создан '+DateTimeToStr(Now));
+    file_config:=config_dir+'\config.ini';
+    file_users:=config_dir+'\users.ini';
+    file_log:=config_dir+'\error.log';
+    if not FileExists(file_log) then
+      StrList.SaveToFile(file_log, TEncoding.Unicode);
+    if not FileExists(file_users) then
+      StrList.SaveToFile(file_users, TEncoding.Unicode);
 
-  PCorePlugin:= @CorePlugin;
+    PCorePlugin:= @CorePlugin;
 
-  // Указываем метод, который будет вызываться при ошибке
-  CorePlugin.onError                      := Error;
+    // Указываем метод, который будет вызываться при ошибке
+    CorePlugin.onError                      := Error;
 
-  CorePlugin.onAuthFail                   := BotAuthFail;
+    CorePlugin.onAuthFail                   := BotAuthFail;
 
-  // Указываем метод, который будет вызываться при сообщении в канале
-  CorePlugin.onPublicMessage              := PublicMessage;
-  CorePlugin.onPublicImage              	:= PublicImage;
+    // Указываем метод, который будет вызываться при сообщении в канале
+    CorePlugin.onPublicMessage              := PublicMessage;
+    CorePlugin.onPublicImage              	:= PublicImage;
 
-  // Указываем метод, который будет вызываться при подключении бота
-  CorePlugin.onBotJoin                    := BotJoin;
+    // Указываем метод, который будет вызываться при подключении бота
+    CorePlugin.onBotJoin                    := BotJoin;
 
-  // Указываем метод, который будет вызываться при получении приватного сообщения
-  CorePlugin.onPrivateMessage             := PrivateMessage;
-  CorePlugin.onPrivateImage              	:= PrivateImage;
+    // Указываем метод, который будет вызываться при получении приватного сообщения
+    CorePlugin.onPrivateMessage             := PrivateMessage;
+    CorePlugin.onPrivateImage              	:= PrivateImage;
 
-  // Указываем метод, который будет вызываться при получении персонального сообщения
-  CorePlugin.onPersonalMessage            := PersonalMessage;
-
-
-  // Указываем метод, который будет вызываться при подключении пользователя к каналу
-  CorePlugin.onUserJoinChannel            := UserJoinChannel;
-  CorePlugin.onUserLeftChannel            := UserLeftChannel;
-
-  CorePlugin.onChatUserJoin               := UserJoinChat;
-  CorePlugin.onChatUserLeft               := UserLeftChat;
-
-  CorePlugin.onUserStatusChanged          := UserStatusChanged;
-
-  CorePlugin.onRestrictionAdded						:= RestrictionAdded;
-  CorePlugin.onRestrictionRemoved					:= RestrictionRemoved;
+    // Указываем метод, который будет вызываться при получении персонального сообщения
+    CorePlugin.onPersonalMessage            := PersonalMessage;
 
 
-  // Создаем виртуального пользователя
-  Loaded:=False;
-  if not FileExists(file_config) then
-  begin
-    MessageBox(0, 'Отсутствуют один или несколько файлов, необходимых для работы плагина. При нажатии ОК откроется директория, в которую необходимо скопировать файлы настроек.', 'Ошибка при запуске плагина "Linker"', MB_ICONEXCLAMATION);
-    ShellExecute(0, 'open', PChar('"'+config_dir+'"'), nil, nil, SW_SHOWNORMAL);
-    CorePlugin.StopPlugin;
-  end
-  else
+    // Указываем метод, который будет вызываться при подключении пользователя к каналу
+    CorePlugin.onUserJoinChannel            := UserJoinChannel;
+    CorePlugin.onUserLeftChannel            := UserLeftChannel;
+
+    CorePlugin.onChatUserJoin               := UserJoinChat;
+    CorePlugin.onChatUserLeft               := UserLeftChat;
+
+    CorePlugin.onUserStatusChanged          := UserStatusChanged;
+
+    CorePlugin.onRestrictionAdded						:= RestrictionAdded;
+    CorePlugin.onRestrictionRemoved					:= RestrictionRemoved;
+
+
+    // Создаем виртуального пользователя
+    Loaded:=False;
+    if not FileExists(file_config) then
+    begin
+      MessageBox(0, 'Отсутствуют один или несколько файлов, необходимых для работы плагина. При нажатии ОК откроется директория, в которую необходимо скопировать файлы настроек.', 'Ошибка при запуске плагина "Linker"', MB_ICONEXCLAMATION);
+      ShellExecute(0, 'open', PChar('"'+config_dir+'"'), nil, nil, SW_SHOWNORMAL);
+      CorePlugin.StopPlugin;
+    end
+    else
       begin
         Ini := TIniFile.Create(file_config);
         link.LoadSettings(Ini);
@@ -124,6 +125,10 @@ begin
         else
           CorePlugin.JoinVirtualUser(BOT_NAME, BOT_IP, 0, BOT_PASS, BOT_ISFEMALE);
       end;
+  except
+    on e: exception do
+      CorePlugin.onError(CorePlugin, e, '----onInit Exception----'+Chr(13)+Chr(10));
+  end;
 end;
 
 destructor TCommPlugin.Destroy;
@@ -193,10 +198,18 @@ end;
   greeting - приветствие канала
 }
 procedure TCommPlugin.BotJoin(Sender: TObject; Name: String; channel : string; theme : string; greeting: string);
+var
+  Str: String;
 begin
-  if not Loaded then begin
-    Link.Init();
-    Loaded:=True;
+	try
+  	Str:='----onBotJoin Exception----'+Chr(13)+Chr(10);
+		if not Loaded then begin
+    	Link.Init();
+    	Loaded:=True;
+  	end;
+  except
+    on e: exception do
+      CorePlugin.onError(CorePlugin, e, Str);
   end;
 end;
 
@@ -215,13 +228,12 @@ var
 begin
   if not Loaded then Exit;
   if User.Name=BOT_NAME then exit;
-  if VUNames.IndexOf(User.Name)<>-1 then exit;
-  if Assigned(IgnorePrefixList) then
-    for I := 0 to IgnorePrefixList.Count - 1 do
-      if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
-        Exit;
-    
   try
+  	if VUNames.IndexOf(User.Name)<>-1 then exit;
+  	if Assigned(IgnorePrefixList) then
+    	for I := 0 to IgnorePrefixList.Count - 1 do
+      	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
+        	Exit;
     Str:='----onMsg Exception----'+Chr(13)+Chr(10);
     Link.OnMsg(User, Channel, bMessage, regime);
   except
@@ -244,13 +256,12 @@ var
 begin
   if not Loaded then Exit;
   if User.Name=BOT_NAME then exit;
-  if VUNames.IndexOf(User.Name)<>-1 then exit;
-  if Assigned(IgnorePrefixList) then
-    for I := 0 to IgnorePrefixList.Count - 1 do
-      if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
-        Exit;
-
   try
+  	if VUNames.IndexOf(User.Name)<>-1 then exit;
+  	if Assigned(IgnorePrefixList) then
+    	for I := 0 to IgnorePrefixList.Count - 1 do
+      	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
+        	Exit;
     Str:='----onImage Exception----'+Chr(13)+Chr(10);
     Link.OnImg(User, Channel, image);
   except
@@ -327,12 +338,12 @@ var
   I: Integer;
 begin
   if not Loaded then Exit;
-  if VUNames.IndexOf(User.Name)<>-1 then exit;
-  if Assigned(IgnorePrefixList) then
-    for I := 0 to IgnorePrefixList.Count - 1 do
-      if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
-        Exit;
   try
+  	if VUNames.IndexOf(User.Name)<>-1 then exit;
+  	if Assigned(IgnorePrefixList) then
+    	for I := 0 to IgnorePrefixList.Count - 1 do
+      	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
+        	Exit;
     Str:='----onUserJoinChannel Exception----'+Chr(13)+Chr(10);
     Link.onUserJoinChannel(User, Channel);
   except
@@ -347,12 +358,12 @@ var
   I: Integer;
 begin
   if not Loaded then Exit;
-  if VUNames.IndexOf(User.Name)<>-1 then exit;
-  if Assigned(IgnorePrefixList) then
-    for I := 0 to IgnorePrefixList.Count - 1 do
-      if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
-        Exit;
   try
+  	if VUNames.IndexOf(User.Name)<>-1 then exit;
+  	if Assigned(IgnorePrefixList) then
+    	for I := 0 to IgnorePrefixList.Count - 1 do
+     	 	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
+       	 	Exit;
     Str:='----onUserLeftChannel Exception----'+Chr(13)+Chr(10);
     Link.onUserLeftChannel(User, Channel);
   except
@@ -367,16 +378,16 @@ var
   I: Integer;
 begin
   //if not Loaded then Exit;
-  if not Loaded then begin
-    Link.Init();
-    Loaded:=True;
-  end;
-  if Assigned(IgnorePrefixList) then
-    for I := 0 to IgnorePrefixList.Count - 1 do
-      if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
-        Exit;
   try
     Str:='----onUserJoinChat Exception----'+Chr(13)+Chr(10);
+  	if not Loaded then begin
+    	Link.Init();
+    	Loaded:=True;
+  	end;
+  	if Assigned(IgnorePrefixList) then
+    	for I := 0 to IgnorePrefixList.Count - 1 do
+      	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
+        	Exit;
     Link.onUserJoinChat(User);
   except
     on e: exception do
@@ -389,13 +400,13 @@ var
   Str: String;
   I: Integer;
 begin
-  if not Loaded then Exit;
-  if Assigned(IgnorePrefixList) then
-    for I := 0 to IgnorePrefixList.Count - 1 do
-      if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
-        Exit;
+	if not Loaded then Exit;
   try
     Str:='----onUserLeftChat Exception----'+Chr(13)+Chr(10);
+  	if Assigned(IgnorePrefixList) then
+    	for I := 0 to IgnorePrefixList.Count - 1 do
+      	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
+        	Exit;
     Link.onUserLeftChat(User);
   except
     on e: exception do

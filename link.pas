@@ -1,4 +1,4 @@
-{$DEFINE Server}
+//{$DEFINE Server}
 unit link;
 
 interface
@@ -26,8 +26,6 @@ type
       procedure SocketRead(Sender: TObject; Socket: TCustomWinSocket);
       {$IFDEF Server}
       procedure ServerSocketAccept(Sender: TObject; Socket: TCustomWinSocket);
-      procedure ServerSocketClientConnect(Sender: TObject;
-        Socket: TCustomWinSocket);
       procedure ServerSocketClientDisconnect(Sender: TObject;
         Socket: TCustomWinSocket);
       procedure ServerSocketClientError(Sender: TObject;
@@ -117,7 +115,6 @@ begin
     {$IFDEF Server}
     S:=TServerSocket.Create(nil);
     S.OnAccept:=ServerSocketAccept;
-    S.OnClientConnect:=ServerSocketClientConnect;
     S.OnClientDisconnect:=ServerSocketClientDisconnect;
     S.OnClientError:=ServerSocketClientError;
     S.OnClientRead:=SocketRead;
@@ -167,40 +164,35 @@ end;
 {$IFDEF Server}
 procedure TLinkSocket.ServerSocketAccept(Sender: TObject; Socket: TCustomWinSocket);
 var
-  Users: TUsers;
-  Count, I: DWord;
-  DataToSend: String;
+	Users: TUsers;
+	Count, I: DWord;
+	DataToSend: String;
 begin
-  ConnS:=Socket;
-  VUNames.Clear;
-  SU.TimerBans.Enabled:=False;
-  SU.Timer.Enabled:=False;
-  SU.ListNames.Clear;
-  Count:=PCorePlugin^.AskUsersInChat(Users);
-  for I := 1 to Count do
-    if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and  (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1)  then
-      SU.ListNames.Add(Users[I].Name);
-  SU.Timer.Enabled:=True;
-  AddKey:=Random(2000000000);
-  Self.SendText(IntToStr(AddKey),'K');
-  DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
-  Self.SendText(DataToSend);
-  SU.LastUpdate:=0;
-  SU.TimerBans.Enabled:=True;
-  Connected:=True;
-end;
-{$ENDIF}
-
-{$IFDEF Server}
-procedure TLinkSocket.ServerSocketClientConnect(Sender: TObject;
-  Socket: TCustomWinSocket);
-begin
-  if Socket.RemoteAddress<>CONNECT_IP then
-  begin
-  	PCorePlugin^.WriteLog(file_log, 'Denied '+Socket.RemoteAddress);
-    Socket.Close;
+	if Socket.RemoteAddress<>CONNECT_IP then
+	begin
+		PCorePlugin^.WriteLog(file_log, 'Denied '+Socket.RemoteAddress);
+		Socket.Close;
+	end
+	else
+	begin
+		ConnS:=Socket;
+		VUNames.Clear;
+		SU.TimerBans.Enabled:=False;
+		SU.Timer.Enabled:=False;
+		SU.ListNames.Clear;
+		Count:=PCorePlugin^.AskUsersInChat(Users);
+		for I := 1 to Count do
+			if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and  (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1)  then
+				SU.ListNames.Add(Users[I].Name);
+		SU.Timer.Enabled:=True;
+		AddKey:=Random(2000000000);
+		Self.SendText(IntToStr(AddKey),'K');
+		DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
+		Self.SendText(DataToSend);
+		SU.LastUpdate:=0;
+		SU.TimerBans.Enabled:=True;
+		Connected:=True;
   end;
-  //Memo1.Lines.Add('Client Connected! '+Socket.RemoteAddress);
 end;
 
 {$ELSE}
@@ -215,19 +207,28 @@ var
   Users: TUsers;
   Count, I: DWord;
   DataToSend: String;
+  Text: String;
 begin
-  ConnS:=S.Socket;
-  SU.Timer.Enabled:=False;
-  SU.ListNames.Clear;
-  VUNames.Clear;
-  DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
-  Self.SendText(DataToSend);
-  Count:=PCorePlugin^.AskUsersInChat(Users);
-  for I := 1 to Count do
-    if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1) then
-      SU.ListNames.Add(Users[I].Name);
-  SU.Timer.Enabled:=True;
-  Connected:=True;
+  try
+    ConnS:=S.Socket;
+    SU.Timer.Enabled:=False;
+    SU.ListNames.Clear;
+    VUNames.Clear;
+    DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
+    Self.SendText(DataToSend);
+    Count:=PCorePlugin^.AskUsersInChat(Users);
+    for I := 1 to Count do
+      if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1) then
+        SU.ListNames.Add(Users[I].Name);
+    SU.Timer.Enabled:=True;
+    Connected:=True;
+  except
+    on e:Exception do
+    begin
+      Text:='--------------OnKeysReceiveException--------'+Chr(13)+Chr(10);
+      PCorePlugin^.onError(PCorePlugin^, e, Text);
+    end;
+  end;
 end;
 {$ENDIF}
 
@@ -238,6 +239,28 @@ var I: LongInt;
 begin
   if (ConnS = Socket) then
   begin
+  	try
+  		ConnS:=nil;
+  		Connected:=False;
+  		SU.Timer.Enabled:=False;
+  		SU.ListNames.Clear;
+  		for I := 0 to VUNames.Count - 1 do
+    		PCorePlugin^.LeaveVirtualUser(VUNames[I]);
+  		VUNames.Clear;
+  		SU.TimerBans.Enabled:=False;
+  		PCorePlugin^.AddState(BOT_NAME, '');
+    except
+    	on e:Exception do
+      	PCorePlugin^.onError(PCorePlugin^, e, '--------------OnDisconnectException--------'+Chr(13)+Chr(10));
+  	end;
+  end;
+end;
+
+{$ELSE}
+procedure TLinkSocket.ClientSocketDisconnect(Sender: TObject; Socket: TCustomWinSocket);
+var I: LongInt;
+begin
+	try
   	ConnS:=nil;
   	Connected:=False;
   	SU.Timer.Enabled:=False;
@@ -247,22 +270,10 @@ begin
   	VUNames.Clear;
   	SU.TimerBans.Enabled:=False;
   	PCorePlugin^.AddState(BOT_NAME, '');
+  except
+    on e:Exception do
+      PCorePlugin^.onError(PCorePlugin^, e, '--------------OnDisconnectException--------'+Chr(13)+Chr(10));
   end;
-end;
-
-{$ELSE}
-procedure TLinkSocket.ClientSocketDisconnect(Sender: TObject; Socket: TCustomWinSocket);
-var I: LongInt;
-begin
-  ConnS:=nil;
-  Connected:=False;
-  SU.Timer.Enabled:=False;
-  SU.ListNames.Clear;
-  for I := 0 to VUNames.Count - 1 do
-    PCorePlugin^.LeaveVirtualUser(VUNames[I]);
-  VUNames.Clear;
-  SU.TimerBans.Enabled:=False;
-  PCorePlugin^.AddState(BOT_NAME, '');
 end;
 {$ENDIF}
 
@@ -299,22 +310,27 @@ var
     Users: TUsers;
     Flag: Boolean;
 begin
-  for I := 1 to 16 do
-    if ChannelList[I]<>'' then
-    begin
-      Count:=PCorePlugin^.AskUsersInChannel(BOT_NAME, ChannelList[I], Users);
-      Flag:=False;
-      Index:=1;
-      while not Flag and (Index<=Count) do
-      begin
-        Flag:=(Users[Index].Name=UserName);
-        Inc(Index);
-      end;
-      if Flag then
-        PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, UserName, ChannelList[I], 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
-      end;
-  if IniUsers.ReadInteger('Message', CheckStr(UserName), 0)<>2 then
-    IniUsers.DeleteKey('Message', CheckStr(UserName));
+	try
+  	for I := 1 to 16 do
+    	if ChannelList[I]<>'' then
+    	begin
+      	Count:=PCorePlugin^.AskUsersInChannel(BOT_NAME, ChannelList[I], Users);
+      	Flag:=False;
+      	Index:=1;
+      	while not Flag and (Index<=Count) do
+      	begin
+       		 Flag:=(Users[Index].Name=UserName);
+        	Inc(Index);
+    		end;
+      	if Flag then
+        	PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, UserName, ChannelList[I], 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
+      	end;
+  	if IniUsers.ReadInteger('Message', CheckStr(UserName), 0)<>2 then
+    	IniUsers.DeleteKey('Message', CheckStr(UserName));
+  except
+    on e:Exception do
+      PCorePlugin^.onError(PCorePlugin^, e, '--------------KickUserException--------');
+  end;
 end;
 
 procedure ProcessData(const S: String);
@@ -333,6 +349,7 @@ var Code, Icon, BanUT: Word;
     Flag: Boolean;
 begin
   Code:=0;
+  try
   Str:=Copy(S, 1, 1);
   if Str='E' then
     Str:=Decrypt(Copy(S,2,Length(S)-1), StartKey, MultKey, AddKey)
@@ -346,7 +363,6 @@ begin
   {$ENDIF}
   else
     Str:=Copy(S,2,Length(S)-1);
-  try
     P:=1;
     Code:=StrToWord(Str,P);
     case CODE of
@@ -701,28 +717,37 @@ var
   User:TUser;
   Status: String;
   DataToSend: String;
+  Text: String;
 begin
-  if ListNames.Count>0 then
-  begin
-    if ListNames.Count>10 then
-      SendCount:= 10
-    else
-      SendCount:= ListNames.Count;
-    for I := 0 to SendCount - 1 do
+  try
+  	if ListNames.Count>0 then
+  	begin
+    	if ListNames.Count>10 then
+      	SendCount:= 10
+    	else
+      	SendCount:= ListNames.Count;
+    	for I := 0 to SendCount - 1 do
+    	begin
+      	User:=PCorePlugin^.AskUserInfo(ListNames[0], Status);
+      	ListNames.Delete(0);
+      	DataToSend:=WordToStr(LNK_CODE_JOIN)+TextToStr(User.Name)+TextToStr(User.IP)+WordToStr(User.sex)+TextToStr(PCorePlugin^.AskID(User.Name));
+      	Sock.SendText(DataToSend);
+      	if Status<>'' then
+      	begin
+        	DataToSend:=WordToStr(LNK_CODE_STATUSCHNG)+TextToStr(User.Name)+TextToStr(Status);
+        	Sock.SendText(DataToSend);
+      	end;
+    	end;
+  	end
+  	else
+    	Timer.Enabled:=False;
+  except
+    on e:Exception do
     begin
-      User:=PCorePlugin^.AskUserInfo(ListNames[0], Status);
-      ListNames.Delete(0);
-      DataToSend:=WordToStr(LNK_CODE_JOIN)+TextToStr(User.Name)+TextToStr(User.IP)+WordToStr(User.sex)+TextToStr(PCorePlugin^.AskID(User.Name));
-      Sock.SendText(DataToSend);
-      if Status<>'' then
-      begin
-        DataToSend:=WordToStr(LNK_CODE_STATUSCHNG)+TextToStr(User.Name)+TextToStr(Status);
-        Sock.SendText(DataToSend);
-      end;
+      Text:='--------------SendData.Send Exception--------'+Chr(13)+Chr(10);
+      PCorePlugin^.onError(PCorePlugin^, e, Text);
     end;
-  end
-  else
-    Timer.Enabled:=False;
+  end;
 end;
 
 procedure TSendData.SendBans(Sender: TObject);
@@ -734,41 +759,50 @@ var
   Restrictions:TRestrictions;
   DataToSend: String;
   Flag:Boolean;
+  Text: String;
 begin
-  Count:=PCorePlugin^.AskRestrictions(Restrictions);
-  DataToSend:='';
-  SendCount:=0;
-  for I := 1 to Count do
-  begin
-    if (Restrictions[I].date>=LastUpdate) and (Copy(Restrictions[I].Name, 1, Length(name_prefix))=name_prefix) and (Restrictions[I].ident>2) then
-      if Restrictions[I].banType>=2 then
-      begin
-        K:=1;
-        Flag:=False;
-        while not Flag and (K<=16) do
-        begin
-          Flag:=(ChannelList[K]=Restrictions[I].channel) and (ChannelList[K]<>'');
-          Inc(K);
-        end;
-        if Flag then
-        begin
-          DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(K-1)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
-          Inc(SendCount);
-        end;
-      end;
-      {else
-      begin
-        DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(0)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
-        Inc(SendCount);
-      end;}
+	try
+  	Count:=PCorePlugin^.AskRestrictions(Restrictions);
+  	DataToSend:='';
+  	SendCount:=0;
+  	for I := 1 to Count do
+  	begin
+    	if (Restrictions[I].date>=LastUpdate) and (Copy(Restrictions[I].Name, 1, Length(name_prefix))=name_prefix) and (Restrictions[I].ident>2) then
+      	if Restrictions[I].banType>=2 then
+      	begin
+        	K:=1;
+        	Flag:=False;
+        	while not Flag and (K<=16) do
+        	begin
+          	Flag:=(ChannelList[K]=Restrictions[I].channel) and (ChannelList[K]<>'');
+          	Inc(K);
+          end;
+        	if Flag then
+        	begin
+          	DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(K-1)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
+          	Inc(SendCount);
+        	end;
+      	end;
+      	{else
+      	begin
+        	DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(0)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
+        	Inc(SendCount);
+      	end;}
+  	end;
+  	if LastUpdate=0 then
+    	DataToSend:=WordToStr(LNK_CODE_BANLIST)+DWordToStr(SendCount)+WordToStr(0)+DataToSend
+  	else
+    	DataToSend:=WordToStr(LNK_CODE_BANLIST)+DWordToStr(SendCount)+WordToStr(1)+DataToSend;
+  	LastUpdate:=Now;
+  	SU.TimerBans.Enabled:=False;
+  	Sock.SendText(DataToSend);
+  except
+    on e:Exception do
+    begin
+      Text:='--------------SendData.SendBans Exception--------'+Chr(13)+Chr(10);
+      PCorePlugin^.onError(PCorePlugin^, e, Text);
+    end;
   end;
-  if LastUpdate=0 then
-    DataToSend:=WordToStr(LNK_CODE_BANLIST)+DWordToStr(SendCount)+WordToStr(0)+DataToSend
-  else
-    DataToSend:=WordToStr(LNK_CODE_BANLIST)+DWordToStr(SendCount)+WordToStr(1)+DataToSend;
-  LastUpdate:=Now;
-  SU.TimerBans.Enabled:=False;
-  Sock.SendText(DataToSend);
 end;
 
 {$IFNDEF Server}
@@ -1354,18 +1388,5 @@ begin
   IniUsers.Free;
   Connected:=False;
 end;
-
-{  procedure ResetTimerQ();
-  var
-    Ptr: Pointer;
-    Buf: TBytes;
-  begin
-    SetLength(Buf, 4);
-    Ptr:=@ResetTimer;
-    CopyMemory(@Buf[0], @Ptr, 4);
-    MsgQueue.InsertMsg(QUEUE_MSGTYPE_CALL, @Buf[0], 4);
-    Buf:=nil;
-  end; }
-
 
 end.

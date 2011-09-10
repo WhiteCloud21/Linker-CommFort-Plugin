@@ -77,7 +77,8 @@ implementation
     Stream: TMemoryStream;
   begin
     Stream :=TMemoryStream.Create;
-    Stream.WriteBuffer(Value[0], BufLength);
+    if (BufLength > 0) then
+    	Stream.WriteBuffer(Value[0], BufLength);
     InsertMsg(MsgType, Stream);
   end;
 
