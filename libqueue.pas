@@ -57,18 +57,17 @@ implementation
   var
     P : PMsgList;
   begin
-  	DataAccessCriticalSection.Enter;
-    Timer.Enabled := False;
     Timer.Free;
+    while not DataAccessCriticalSection.TryEnter do ;
+    DataAccessCriticalSection.Free;
     while (Msg<>nil) do
     begin
       P:=Msg;
       Msg:=Msg^.Next;
       P^.Value.Free;
+      P^.Value:=nil;
       Dispose(P);
     end;
-    DataAccessCriticalSection.Leave;
-    DataAccessCriticalSection.Free;
     inherited;
   end;
 
@@ -77,9 +76,9 @@ implementation
     Stream: TMemoryStream;
   begin
     Stream :=TMemoryStream.Create;
-    if (BufLength > 0) then
-    	Stream.WriteBuffer(Value[0], BufLength);
+    Stream.WriteBuffer(Value[0], BufLength);
     InsertMsg(MsgType, Stream);
+    Stream.Free;
   end;
 
   procedure TMsgQueue.InsertMsg(MsgType: DWord; Value: TMemoryStream);
@@ -146,6 +145,7 @@ implementation
             CommFortProcess(dwPluginID, Msg^.MsgType, Msg^.Value.Memory, Msg^.Value.Size);
         end;
         Msg^.Value.Free;
+        Msg^.Value := nil;
         P:=Msg;
         Msg:=Msg^.Next;
         Dispose(P);
@@ -164,6 +164,7 @@ implementation
         Timer.Interval:=PauseTime;
         Timer.Enabled:=True;
         Msg^.Value.Free;
+        Msg^.Value:=nil;
         P:=Msg;
         Msg:=Msg^.Next;
         Dispose(P);
@@ -175,4 +176,3 @@ implementation
   end;
 
 end.
-
