@@ -23,7 +23,6 @@ uses
 function PluginStart(dwThisPluginID : DWORD; func1 : TtypeCommFortProcess; func2: TtypeCommFortGetData) : Boolean; stdcall;
 begin
   ThisPlugin := TCommPlugin.Create(dwThisPluginID, @func1, @func2);
-  //MessageBox(0, PChar( ExtractFileNameEx(GetDllPath, false) ), '', 0);
   result                       := true;
 end;
 

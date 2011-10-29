@@ -45,7 +45,7 @@ type
       procedure AddImageToChannel(Name, channel : string; filename : String); overload;
       procedure AddPrivateImage(Name, User : string; image : TJpegImage); overload;
       procedure AddPrivateImage(Name, User : string; filename : String); overload;
-      procedure AddTheme(Name:String; channel : string; newtheme : string);
+      procedure AddTheme(Name:String; channel : string; Theme : string);
       procedure AddGreeting(Name:String; channel : string; Text : string);
       procedure AddState(Name, newstate : string);
       procedure AddChannel(Name, channel : string; visibility, regime : DWord);
@@ -707,7 +707,7 @@ begin
   end;
 end;
 
-procedure TCommPluginC.AddTheme(Name:String; channel : string; newtheme : string);
+procedure TCommPluginC.AddTheme(Name:String; channel : string; Theme : string);
 var
   msg: TMemoryStream;
   len: DWord;
@@ -859,6 +859,7 @@ var
   msg: TMemoryStream;
   len: DWord;
 begin
+  msg := TMemoryStream.Create;
   len:=Length(Name);
   msg.WriteBuffer(len, 4);
   msg.WriteBuffer(PChar(Name)^, len*2);
@@ -873,6 +874,7 @@ var
   msg: TMemoryStream;
   len: DWord;
 begin
+  msg := TMemoryStream.Create;
   len:=Length(Name);
   msg.WriteBuffer(len, 4);
   msg.WriteBuffer(PChar(Name)^, len*2);
@@ -887,6 +889,7 @@ var
   msg: TMemoryStream;
   len: DWord;
 begin
+  msg := TMemoryStream.Create;
   len:=Length(Name);
   msg.WriteBuffer(len, 4);
   msg.WriteBuffer(PChar(Name)^, len*2);
