@@ -867,6 +867,7 @@ begin
   msg.WriteBuffer(len, 4);
   msg.WriteBuffer(PChar(User)^, len*2);
   MsgQueue.InsertMsg(PM_PLUGIN_ACCOUNT_AGREE, msg);
+  msg.Free;
 end;
 
 procedure TCommPluginC.RemoveUser(Name, User : string);
@@ -882,6 +883,7 @@ begin
   msg.WriteBuffer(len, 4);
   msg.WriteBuffer(PChar(User)^, len*2);
   MsgQueue.InsertMsg(PM_PLUGIN_ACCOUNT_DEL, msg);
+  msg.Free;
 end;
 
 procedure TCommPluginC.AddPassword(Name, User : string; PassType: DWord; Password: String);
@@ -901,6 +903,7 @@ begin
   msg.WriteBuffer(len, 4);
   msg.WriteBuffer(PChar(Password)^, len*2);
   MsgQueue.InsertMsg(PM_PLUGIN_PASSWORD_CHANGE, msg);
+  msg.Free;
 end;
 
 procedure TCommPluginC.StopPlugin;
@@ -956,7 +959,7 @@ begin
       SetLength(msg, len);
       len:=Length(Name);
       CopyMemory(@msg[0], @len, 4);
-      CopyMemory(@msg[4], @Name[1], len*2);
+      CopyMemory(@msg[4], PChar(Name), len*2);
       i:=4+len*2;
       iSize := CommFortGetData(dwPluginID, GD_USERCHANNELS_GET, nil, 0, @msg[0], i);
       SetLength(Buf, iSize);
@@ -993,11 +996,11 @@ begin
       SetLength(msg, len);
       len:=Length(Name);
       CopyMemory(@msg[0], @len, 4);
-      CopyMemory(@msg[4], @Name[1], len*2);
+      CopyMemory(@msg[4], PChar(Name), len*2);
       i:=4+len*2;
       len:=Length(Channel);
       CopyMemory(@msg[i], @len, 4);
-      CopyMemory(@msg[i+4], @Channel[1], len*2);
+      CopyMemory(@msg[i+4], PChar(Channel), len*2);
       i:=i+len*2+4;
       iSize := CommFortGetData(dwPluginID, GD_CHANNELUSERS_GET, nil, 0, @msg[0], i);
       SetLength(Buf, iSize);
@@ -1175,35 +1178,32 @@ begin
     CopyMemory(@Result.sex, @Buf[iSize],4);
     iSize:=iSize+4;
     Status:=TEncoding.Unicode.GetString(Buf, iSize+4, Dword(Buf[iSize])*2);
-    msg.Free;
   end;
+  msg.Free;
 end;
 
 function TCommPluginC.AskRight(Name: String; RightType: DWord; Channel: String):DWord;
 var
-  msg: TBytes;
+  msg: TMemoryStream;
   Buf: TBytes;
-  iSize, i, len: DWord;
+  len: DWord;
 begin
-  len:=Length(Name)+Length(Channel)*2+12;
-  SetLength(msg, len);
+  msg := TMemoryStream.Create;
   len:=Length(Name);
-  CopyMemory(@msg[0], @len, 4);
-  CopyMemory(@msg[4], @Name[1], len*2);
-  i:=4+len*2;
-  CopyMemory(@msg[i], @RightType, 4);
-  i:=i+4;
+  msg.WriteBuffer(len, 4);
+  msg.WriteBuffer(PChar(Name)^, len*2);
+  msg.WriteBuffer(RightType, 4);
   len:=Length(Channel);
-  CopyMemory(@msg[i], @len, 4);
-  CopyMemory(@msg[i+4], @Channel[1], len*2);
-  i:=i+4+len*2;
-  iSize := CommFortGetData(dwPluginID, GD_RIGHT_GET, nil, 0, @msg[0], i);
-  SetLength(Buf, iSize);
-  CommFortGetData(dwPluginID, GD_RIGHT_GET, Buf, iSize, @msg[0], i);
+  msg.WriteBuffer(len, 4);
+  msg.WriteBuffer(PChar(Channel)^, len*2);
+  len := CommFortGetData(dwPluginID, GD_RIGHT_GET, nil, 0, msg.Memory, msg.Size);
+  SetLength(Buf, len);
+  CommFortGetData(dwPluginID, GD_RIGHT_GET, Buf, len, msg.Memory, msg.Size);
   CopyMemory(@Result, @Buf[0], 4);
+  msg.Free;
 end;
 
-procedure TCommPluginC.AskMaxImageSize(channel: String; var ByteSize: DWord; var PixelSize: DWord);
+procedure TCommPluginC.AskMaxImageSize(Channel: String; var ByteSize: DWord; var PixelSize: DWord);
 var
 	outmsg: TMemoryStream;
 	inmsg: TMemoryStream;
@@ -1212,7 +1212,7 @@ begin
 	outmsg := TMemoryStream.Create;
 	iSize := Length(channel);
 	outmsg.WriteBuffer(iSize, 4);
-	outmsg.WriteBuffer(channel[1], iSize * 2);
+	outmsg.WriteBuffer(PChar(Channel)^, iSize * 2);
 	outmsg.Seek(0, soBeginning);
 	iSize := CommFortGetData(dwPluginID, GD_MAXIMAGESIZE, nil, 0, outmsg.Memory, outmsg.Size);
 	inmsg := TMemoryStream.Create;

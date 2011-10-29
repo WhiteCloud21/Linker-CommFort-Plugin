@@ -1,4 +1,5 @@
-//{$DEFINE Server}
+{$I plugin.inc}
+
 unit link;
 
 interface
@@ -7,7 +8,7 @@ uses
   IniFiles,
   Windows, WinInet, SysUtils, Classes, SyncObjs,
   Math, Controls, StdCtrls, ExtCtrls, ComCtrls, Buttons,
-  comm_info, comm_data, libfunc, libqueue, ScktComp, LongDataTransfer, JPEG;
+  comm_info, comm_data, libfunc, libqueue, ScktComp, LongDataTransfer, JPEG, LbRSA;
 
 type
   TLinkSocket = class
@@ -18,6 +19,8 @@ type
       S: TClientSocket;
       {$ENDIF}
       ConnS: TCustomWinSocket;
+
+      LbRSA1: TLbRSA;
 
       procedure SendText(Str: string; EncType:Char='E');
 
@@ -32,7 +35,6 @@ type
         Socket: TCustomWinSocket; ErrorEvent: TErrorEvent;
         var ErrorCode: Integer);
       {$ELSE}
-      procedure OnKeysReceive();
       procedure ClientSocketConnect(Sender: TObject;
         Socket: TCustomWinSocket);
       procedure ClientSocketDisconnect(Sender: TObject;
@@ -41,6 +43,7 @@ type
         Socket: TCustomWinSocket; ErrorEvent: TErrorEvent;
         var ErrorCode: Integer);
       {$ENDIF}
+      procedure OnKeysReceive();
   end;
 
   {$IFNDEF Server}
@@ -126,6 +129,7 @@ begin
     S.OnRead:=SocketRead;
     S.Host:=CONNECT_IP;
     {$ENDIF}
+    LbRSA1 := TLbRSA.Create(nil);
     S.Port:=CONNECT_PORT;
     S.Open();
     ConnS:=nil;
@@ -141,6 +145,7 @@ begin
       S.Close();
   finally
     FreeAndNil(S);
+    FreeAndNil(LbRSA1);
     ConnS:=nil;
   end;
 end;
@@ -185,22 +190,31 @@ begin
 			if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and  (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1)  then
 				SU.ListNames.Add(Users[I].Name);
 		SU.Timer.Enabled:=True;
-		AddKey:=Random(2000000000);
-		Self.SendText(IntToStr(AddKey),'K');
-		DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
-		Self.SendText(DataToSend);
-		SU.LastUpdate:=0;
-		SU.TimerBans.Enabled:=True;
-		Connected:=True;
+		//AddKey:=Random(2000000000);
+		//Self.SendText(IntToStr(AddKey),'K');
+		//DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
+		//Self.SendText(DataToSend);
+		//SU.LastUpdate:=0;
+		//SU.TimerBans.Enabled:=True;
+		//Connected:=True;
+    LbRSA1.GenerateKeyPair;
+    DataToSend:=TextToStr(LbRSA1.PublicKey.ModulusAsString)+TextToStr(LbRSA1.PublicKey.ExponentAsString);
+    Self.SendText(DataToSend, 'K');
   end;
 end;
 
 {$ELSE}
+
 procedure TLinkSocket.ClientSocketConnect(Sender: TObject; Socket: TCustomWinSocket);
 begin
-  SU.LastUpdate:=0;
-  SU.TimerBans.Enabled:=True;
+  //SU.LastUpdate:=0;
+  //SU.TimerBans.Enabled:=True;
+  ConnS:=S.Socket;
+  SU.TimerBans.Enabled:=False;
+  SU.Timer.Enabled:=False;
 end;
+
+{$ENDIF}
 
 procedure TLinkSocket.OnKeysReceive();
 var
@@ -210,17 +224,19 @@ var
   Text: String;
 begin
   try
-    ConnS:=S.Socket;
+    VUNames.Clear;
+  	SU.TimerBans.Enabled:=False;
     SU.Timer.Enabled:=False;
     SU.ListNames.Clear;
-    VUNames.Clear;
     DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
     Self.SendText(DataToSend);
     Count:=PCorePlugin^.AskUsersInChat(Users);
     for I := 1 to Count do
       if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1) then
         SU.ListNames.Add(Users[I].Name);
+    SU.LastUpdate:=0;
     SU.Timer.Enabled:=True;
+    SU.TimerBans.Enabled:=True;
     Connected:=True;
   except
     on e:Exception do
@@ -230,7 +246,6 @@ begin
     end;
   end;
 end;
-{$ENDIF}
 
 {$IFDEF Server}
 procedure TLinkSocket.ServerSocketClientDisconnect(Sender: TObject;
@@ -353,16 +368,38 @@ begin
   Str:=Copy(S, 1, 1);
   if Str='E' then
     Str:=Decrypt(Copy(S,2,Length(S)-1), StartKey, MultKey, AddKey)
-  {$IFNDEF Server}
+  {$IFDEF Server}
   else if Str='K' then
   begin
-    AddKey:=StrToIntDef(Copy(S,2,Length(S)-1), 0);
+    Str:=Copy(S,2,Length(S)-1);
+    P:=1;
+    Count := 1;
+    //AddKey:=StrToIntDef(Copy(S,2,Length(S)-1), 0);
+    AddKey := StrToDword(Sock.LbRSA1.DecryptStringW(StrToText(Str, P)), Count);
+    Count := 1;
+    MultKey := StrToDword(Sock.LbRSA1.DecryptStringW(StrToText(Str, P)), Count);
+    Sock.OnKeysReceive();
+    Exit;
+  end
+  {$ELSE}
+  else if Str='K' then
+  begin
+    //AddKey:=StrToIntDef(Copy(S,2,Length(S)-1), 0);
+    Str:=Copy(S,2,Length(S)-1);
+    P:=1;
+    Sock.LbRSA1.PublicKey.Clear;
+    Sock.LbRSA1.PublicKey.ModulusAsString := StrToText(Str, P);
+    Sock.LbRSA1.PublicKey.ExponentAsString := StrToText(Str, P);
+    AddKey:=Random(2000000000);
+    DataToSend := TextToStr(Sock.LbRSA1.EncryptStringW(DwordToStr(AddKey))) + TextToStr(Sock.LbRSA1.EncryptStringW(DwordToStr(MultKey)));
+    Sock.SendText(DataToSend,'K');
     Sock.OnKeysReceive();
     Exit;
   end
   {$ENDIF}
   else
     Str:=Copy(S,2,Length(S)-1);
+    // <--
     P:=1;
     Code:=StrToWord(Str,P);
     case CODE of
@@ -1339,10 +1376,8 @@ begin
   CONNECT_PORT:=Ini.ReadInteger('Linker', 'ConnectPort', 6538);
   SERVER_LOCAL:=Ini.ReadString('Linker', 'ServerName', 'MyServer');
   name_prefix:=Ini.ReadString('Linker', 'NamePrefix', Chr($13DE));
-  StartKey:=Ini.ReadInteger('Keys', 'StartKey', Random(2000000000));
-  MultKey:=Ini.ReadInteger('Keys', 'MultKey', Random(2000000000));
-  Ini.WriteInteger('Keys', 'StartKey', StartKey);
-  Ini.WriteInteger('Keys', 'MultKey', MultKey);
+  StartKey:=Ini.ReadInteger('Keys', 'MainKey', Random(2000000000));
+  Ini.WriteInteger('Keys', 'MainKey', StartKey);
 end;
 
 function Init():Integer;

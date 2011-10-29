@@ -1,4 +1,5 @@
-//{$DEFINE Server}
+{$I plugin.inc}
+
 unit comm_data;
 
 interface
@@ -185,7 +186,7 @@ const
 
   LNK_CODE_SERVICE_JOINCHANFAIL = 20201;
 
-  PLU_VER  = '0.0.3';
+  PLU_VER  = '0.0.4';
 
   {$IFDEF Server}
   PLU_NAME = 'Линковщик серверов '+PLU_VER+' (сервер)';
