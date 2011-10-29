@@ -198,7 +198,7 @@ begin
 		//SU.TimerBans.Enabled:=True;
 		//Connected:=True;
     LbRSA1.GenerateKeyPair;
-    DataToSend:=TextToStr(LbRSA1.PublicKey.ModulusAsString)+TextToStr(LbRSA1.PublicKey.ExponentAsString);
+    DataToSend:=DwordToStr(PROTOCOL_VER)+TextToStr(LbRSA1.PublicKey.ModulusAsString)+TextToStr(LbRSA1.PublicKey.ExponentAsString);
     Self.SendText(DataToSend, 'K');
   end;
 end;
@@ -373,6 +373,13 @@ begin
   begin
     Str:=Copy(S,2,Length(S)-1);
     P:=1;
+    Ident := StrToDword(Str, P);
+    if Ident <> PROTOCOL_VER then
+    begin
+      PCorePlugin^.WriteLog(file_log, 'Соединение не установлено. Версия протокола: '+IntToStr(PROTOCOL_VER)+'. Версия протокола клиента:'+IntToStr(Ident));
+      Sock.ConnS.Close;
+    	Exit;
+    end;
     Count := 1;
     //AddKey:=StrToIntDef(Copy(S,2,Length(S)-1), 0);
     AddKey := StrToDword(Sock.LbRSA1.DecryptStringW(StrToText(Str, P)), Count);
@@ -387,11 +394,19 @@ begin
     //AddKey:=StrToIntDef(Copy(S,2,Length(S)-1), 0);
     Str:=Copy(S,2,Length(S)-1);
     P:=1;
+    Ident := StrToDword(Str, P);
+    if Ident <> PROTOCOL_VER then
+    begin
+      PCorePlugin^.WriteLog(file_log, 'Соединение не установлено. Версия протокола: '+IntToStr(PROTOCOL_VER)+'. Версия протокола сервера:'+IntToStr(Ident));
+      Sock.ConnS.Close;
+      RC.Timer.Interval := 360000;
+    	Exit;
+    end;
     Sock.LbRSA1.PublicKey.Clear;
     Sock.LbRSA1.PublicKey.ModulusAsString := StrToText(Str, P);
     Sock.LbRSA1.PublicKey.ExponentAsString := StrToText(Str, P);
     AddKey:=Random(2000000000);
-    DataToSend := TextToStr(Sock.LbRSA1.EncryptStringW(DwordToStr(AddKey))) + TextToStr(Sock.LbRSA1.EncryptStringW(DwordToStr(MultKey)));
+    DataToSend := DwordToStr(PROTOCOL_VER) + TextToStr(Sock.LbRSA1.EncryptStringW(DwordToStr(AddKey))) + TextToStr(Sock.LbRSA1.EncryptStringW(DwordToStr(MultKey)));
     Sock.SendText(DataToSend,'K');
     Sock.OnKeysReceive();
     Exit;
@@ -867,6 +882,7 @@ end;
 
 procedure TReconnect.Reconnect(Sender: TObject);
 begin
+	Timer.Interval:=60000;
   if not Sock.S.Active then
      Sock.S.Active:=True;
 end;

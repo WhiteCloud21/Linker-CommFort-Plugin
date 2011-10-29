@@ -109,17 +109,17 @@ begin
       begin
         Ini := TIniFile.Create(file_config);
         link.LoadSettings(Ini);
-        BOT_NAME:= Ini.ReadString('Linker', 'BotName', 'LinkErr');
+        BOT_NAME:= Ini.ReadString('Linker', 'BotName', 'Linker');
         BOT_PASS:= Ini.ReadString('Linker', 'BotPass', '');
-        BOT_IP := Ini.ReadString('Libker', 'BotIP', 'N/A');
-        if Ini.ReadInteger('linker', 'BotIsFemale', 0)=1 then
+        BOT_IP := Ini.ReadString('Linker', 'BotIP', 'N/A');
+        if Ini.ReadInteger('Linker', 'BotIsFemale', 0)=1 then
           BOT_ISFEMALE:=1
         else
           BOT_ISFEMALE:=0;
         Ini.Free;
         if (BOT_PASS='') then
         begin
-          MessageBox(0, 'Смените пароль учётной записи плагина в настройках! (Параметр BotPass в файле "\Plugins\Linker\config.ini")', 'Ошибка при запуске плагина "Линковщик"', MB_ICONEXCLAMATION);
+          MessageBox(0, PChar('Смените пароль учётной записи плагина в настройках! (Параметр BotPass в файле "' + file_config + '")'), 'Ошибка при запуске плагина "Линковщик"', MB_ICONEXCLAMATION);
           CorePlugin.StopPlugin;
         end
         else
