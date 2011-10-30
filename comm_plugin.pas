@@ -313,8 +313,6 @@ begin
     on e: exception do
       CorePlugin.onError(CorePlugin, e, Str);
   end;
-
-  Image.Free;
 end;
 
 procedure TCommPlugin.PersonalMessage(Sender: TObject; Name: string; User : TUser; bMessage : string);
