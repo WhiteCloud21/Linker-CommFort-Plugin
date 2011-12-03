@@ -73,6 +73,12 @@ type
 
   end;
 
+  TChannelInfo = record
+    Name: String;
+    Permanent: Boolean;
+    Owner: String;
+  end;
+
   procedure ProcessData(const S: String);
   function  IsAdmin(const S: String): Boolean;
 
@@ -105,7 +111,8 @@ var
   {$ENDIF}
   VUNames: TStringList;
 
-  ChannelList: array [1..16] of String;
+  ChannelList: array [1..16] of TChannelInfo;
+  WhiteStartList: TStringList;
   IgnorePrefixList: TStringList;
 
   Connected: Boolean;
@@ -230,6 +237,21 @@ begin
     SU.ListNames.Clear;
     DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
     Self.SendText(DataToSend);
+
+    // Отправка списка временных каналов
+    Count := 0;
+    DataToSend := '';
+    for I := 1 to 16 do
+    begin
+      if not ChannelList[I].Permanent and (ChannelList[I].Owner<>'') and (ChannelList[I].Name<>'') then
+      begin
+      	Inc(Count);
+        DataToSend := DataToSend + WordToStr(I) + TextToStr(ChannelList[I].Name);
+      end;
+    end;
+    DataToSend:=WordToStr(LNK_CODE_SERVICE_TEMPCHANLIST)+WordToStr(Count)+DataToSend;
+    Self.SendText(DataToSend);
+
     Count:=PCorePlugin^.AskUsersInChat(Users);
     for I := 1 to Count do
       if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1) then
@@ -327,9 +349,9 @@ var
 begin
 	try
   	for I := 1 to 16 do
-    	if ChannelList[I]<>'' then
+    	if ChannelList[I].Name<>'' then
     	begin
-      	Count:=PCorePlugin^.AskUsersInChannel(BOT_NAME, ChannelList[I], Users);
+      	Count:=PCorePlugin^.AskUsersInChannel(BOT_NAME, ChannelList[I].Name, Users);
       	Flag:=False;
       	Index:=1;
       	while not Flag and (Index<=Count) do
@@ -338,9 +360,9 @@ begin
         	Inc(Index);
     		end;
       	if Flag then
-        	PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, UserName, ChannelList[I], 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
+        	PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, UserName, ChannelList[I].Name, 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
       	end;
-  	if IniUsers.ReadInteger('Message', CheckStr(UserName), 0)<>2 then
+  	if IniUsers.ReadInteger('Message', CheckStr(UserName), 2)<>2 then
     	IniUsers.DeleteKey('Message', CheckStr(UserName));
   except
     on e:Exception do
@@ -362,6 +384,7 @@ var Code, Icon, BanUT: Word;
     Channels: TChannels;
     Restrictions:TRestrictions;
     Flag: Boolean;
+    ChannelsUpdated: array[1..16] of Boolean;
 begin
   Code:=0;
   try
@@ -450,7 +473,7 @@ begin
           I:=StrToWord(Str,P);
           if not I in [1..16] then
             Exit;
-          Channel:=ChannelList[I];
+          Channel:=ChannelList[I].Name;
           //if VUNames.IndexOf(name_prefix+Name)=-1 then // Забанен?
           //begin
           //  DataToSend:=WordToStr(LNK_CODE_SERVICE_JOINCHANFAIL)+TextToStr(Name)+WordToStr(I); // сервисное сообщение на другой сервер
@@ -465,7 +488,7 @@ begin
           I:=StrToWord(Str,P);
           if not I in [1..16] then
             Exit;
-          Channel:=ChannelList[I];
+          Channel:=ChannelList[I].Name;
           PCorePlugin^.LeaveChannel(name_prefix+Name,Channel);
         end;
       LNK_CODE_CMSG:
@@ -474,7 +497,7 @@ begin
           I:=StrToWord(Str,P);
           if not I in [1..16] then
             Exit;
-          Channel:=ChannelList[I];
+          Channel:=ChannelList[I].Name;
           Text:=StrToText(Str,P);
           Icon:=StrToWord(Str, P);
           PCorePlugin^.AddChannel(name_prefix+Name,Channel,0,0);
@@ -486,7 +509,7 @@ begin
           I:=StrToWord(Str,P);
           if not I in [1..16] then
             Exit;
-          Channel:=ChannelList[I];
+          Channel:=ChannelList[I].Name;
           Image:=StrToImg(Str,P);
           if (Image <> nil) then
           begin
@@ -559,7 +582,7 @@ begin
             if not Icon in [1..16] then
               Channel:=' '
             else
-              Channel:=ChannelList[Icon];
+              Channel:=ChannelList[Icon].Name;
             if Channel='' then
               Channel:=' ';
             Text:=StrToText(Str, P);
@@ -587,7 +610,7 @@ begin
           if not Icon in [1..16] then
           	Channel:=''
           else
-          	Channel:=ChannelList[Icon];
+          	Channel:=ChannelList[Icon].Name;
           CountRest:=PCorePlugin^.AskRestrictions(Restrictions);
           I := CountRest;
           Flag := false;
@@ -681,12 +704,12 @@ begin
       LNK_CODE_SERVICE_CONNECTION_OK:
         begin
           Name:=StrToText(Str,P);
-          if (IniUsers.ReadInteger('Message', CheckStr(Name), 0)=0) then
+          if (IniUsers.ReadInteger('Message', CheckStr(Name), 2)=0) then
           begin
             Text:= 'Вы подключены к серверу '+SERVER_REMOTE+'. Вы можете отключиться в любой момент, написав мне "disconnect"'+Chr(13)+Chr(10)+'Список общих каналов:';
             for I := 1 to 16 do
-              if (ChannelList[I]<>'') then
-                Text:=Text+Chr(13)+Chr(10)+'[url=/channel: '+ChannelList[I]+']'+ChannelList[I]+'[/url]';
+              if (ChannelList[I].Name<>'') and ChannelList[I].Permanent then
+                Text:=Text+Chr(13)+Chr(10)+'[url=/channel: '+ChannelList[I].Name+']'+ChannelList[I].Name+'[/url]';
             Text:=Text+Chr(13)+Chr(10)+Chr(13)+Chr(10)+'Если Вы больше не хотите получать это сообщение, напишите мне "silent"';
             PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, Name,Text);
             IniUsers.WriteInteger('Message', CheckStr(Name), 1);
@@ -715,11 +738,86 @@ begin
           Icon:=StrToWord(Str,P); // номер канала
           if not Icon in [1..16] then
             Exit;
-          if ChannelList[Icon]='' then
+          if ChannelList[Icon].Name='' then
             Exit;
-          PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, Name, ChannelList[Icon], 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
+          PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, Name, ChannelList[Icon].Name, 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
         end;
 
+       LNK_CODE_SERVICE_TEMPCHANLIST:
+        begin
+        	for I := 1 to 16 do
+          	ChannelsUpdated[I] := False;
+        	Count := StrToWord(Str,P);  // Количество каналов
+          for K := 1 to Count do
+          begin
+          	Icon := StrToWord(Str,P);  // Номер канала
+          	Name := StrToText(Str,P);	 // Имя канала
+          	if not Icon in [1..16] then
+            	Exit;
+          	if ChannelList[Icon].Permanent or (ChannelList[Icon].Owner<>'') then
+            	Exit;
+            // уже создан
+            if ChannelList[Icon].Name = Name then
+            	Exit;
+            // закрытие старого канала
+            if (ChannelList[Icon].Name <> '') then
+            	CloseChannel(ChannelList[Icon].Name);
+          	Flag := false;
+          	for I := 0 to WhiteStartList.Count - 1 do
+          	begin
+          		Flag := (Length(Name) >= Length(WhiteStartList[I])) and (Copy(Name, 1, Length(WhiteStartList[I])) = WhiteStartList[I]);
+            	if Flag then
+            		break;
+          	end;
+          	if Flag then
+          	begin
+          		ChannelList[Icon].Name := Name;
+            	CreateChannel(Name, 0, 0);
+            	ChannelsUpdated[Icon] := True;
+          	end;
+          end;
+        	for I := 1 to 16 do
+          	if not ChannelsUpdated[I] and not ChannelList[I].Permanent and
+            	(ChannelList[I].Owner = '') and (ChannelList[I].Name <> '') then
+              begin
+              	QuitChannel(ChannelList[I].Name);
+            		CloseChannel(ChannelList[I].Name);
+              end;
+        end;
+
+       LNK_CODE_SERVICE_CREATECHANNEL:
+        begin
+          Icon:=StrToWord(Str,P);  // Номер канала
+          Name:=StrToText(Str,P);	 // Имя канала
+          if not Icon in [1..16] then
+            Exit;
+          if ChannelList[Icon].Permanent or (ChannelList[Icon].Owner<>'') then
+            Exit;
+          Flag := false;
+          for I := 0 to WhiteStartList.Count - 1 do
+          begin
+          	Flag := (Length(Name) >= Length(WhiteStartList[I])) and (Copy(Name, 1, Length(WhiteStartList[I])) = WhiteStartList[I]);
+            if Flag then
+            	break;
+          end;
+          if Flag then
+          begin
+          	ChannelList[Icon].Name := Name;
+            CreateChannel(Name, 0, 0);
+          end;
+        end;
+
+       LNK_CODE_SERVICE_CLOSECHANNEL:
+        begin
+          Icon:=StrToWord(Str,P);  // Номер канала
+          if not Icon in [1..16] then
+            Exit;
+          if ChannelList[Icon].Permanent or (ChannelList[Icon].Owner<>'') or (ChannelList[Icon].Name='') then
+            Exit;
+          QuitChannel(ChannelList[Icon].Name);
+          CloseChannel(ChannelList[Icon].Name);
+          ChannelList[Icon].Name := '';
+        end;
     end;
   except
     on e:Exception do
@@ -826,7 +924,7 @@ begin
         	Flag:=False;
         	while not Flag and (K<=16) do
         	begin
-          	Flag:=(ChannelList[K]=Restrictions[I].channel) and (ChannelList[K]<>'');
+          	Flag:=(ChannelList[K].Name=Restrictions[I].channel) and (ChannelList[K].Name<>'');
           	Inc(K);
           end;
         	if Flag then
@@ -900,6 +998,19 @@ begin
     Sock.SendText(DataToSend);
   end;
   IniUsers.WriteInteger('Connect', CheckStr(User.Name), 1);
+end;
+
+procedure CheckAndCloseChan(Index: Word);
+var
+	DataToSend: String;
+begin
+	if (Index > 0) and (Index <= 16) and not (ChannelList[Index].Permanent) and (ChannelList[Index].Name <> '') then
+  begin
+  	QuitChannel(ChannelList[Index].Name);
+  	CloseChannel(ChannelList[Index].Name);
+    DataToSend:=WordToStr(LNK_CODE_SERVICE_CLOSECHANNEL)+WordToStr(Index);
+    Sock.SendText(DataToSend);
+  end;
 end;
 
 procedure onAuthFail(Name: String; Reason: Integer);
@@ -1008,7 +1119,7 @@ begin
   end;
   Num:=0;
   for I := 1 to 16 do
-    if ChannelList[I]=Channel then
+    if ChannelList[I].Name=Channel then
       Num:=I;
   if Num>0 then
   begin
@@ -1033,7 +1144,7 @@ begin
   end;
   Num:=0;
   for I := 1 to 16 do
-    if ChannelList[I]=Channel then
+    if ChannelList[I].Name=Channel then
       Num:=I;
   if Num>0 then
   begin
@@ -1045,10 +1156,52 @@ end;
 procedure onPrivate(Name: String; User: TUser; Text: String; Regime: Integer);
 var
   DataToSend: String;
-  Index: LongInt;
+  Index: Integer;
+  StrList: TStringList;
 begin
   if Name=BOT_NAME then
   begin
+
+  	if Copy(Text, 1, 15) = '//createchannel' then
+  	begin
+  		StrList := TStringList.Create;
+    	StrList.Delimiter := ' ';
+    	StrList.DelimitedText := Text;
+  		if (StrList.Count > 2) then
+      begin
+      	Index := StrToIntDef(StrList[1], 0);
+        if (Index > 0) and (Index <= 16) and not (ChannelList[Index].Permanent) and (ChannelList[Index].Owner = User.Name) then
+        begin
+        	CheckAndCloseChan(Index);
+        	StrList.Delete(0);
+        	StrList.Delete(0);
+          ChannelList[Index].Name := StrList.DelimitedText;
+          CreateChannel(ChannelList[Index].Name, 0, 0);
+          DataToSend:=WordToStr(LNK_CODE_SERVICE_CREATECHANNEL)+WordToStr(Index)+TextToStr(ChannelList[Index].Name);
+  				Sock.SendText(DataToSend);
+        end;
+      end;
+      StrList.Free;
+    	Exit;
+  	end;
+
+  	if Copy(Text, 1, 14) = '//closechannel' then
+  	begin
+  		StrList := TStringList.Create;
+    	StrList.Delimiter := ' ';
+    	StrList.DelimitedText := Text;
+  		if (StrList.Count > 1) then
+      begin
+      	Index := StrToIntDef(StrList[1], 0);
+        if (Index > 0) and (Index <= 16) and (ChannelList[Index].Owner = User.Name) then
+        begin
+          CheckAndCloseChan(Index);
+        end;
+      end;
+      StrList.Free;
+    	Exit;
+  	end;
+
     onPersonalMsg(Name, User, Text);
     Exit;
   end;
@@ -1177,7 +1330,7 @@ var
 begin
   Num:=0;
   for I := 1 to 16 do
-    if (ChannelList[I]=Channel) and (Channel<>'') then
+    if (ChannelList[I].Name=Channel) and (Channel<>'') then
       Num:=I;
   if Num>0 then
   begin
@@ -1202,7 +1355,7 @@ var
 begin
   Num:=0;
   for I := 1 to 16 do
-    if (ChannelList[I]=Channel) and (Channel<>'') then
+    if (ChannelList[I].Name=Channel) and (Channel<>'') then
       Num:=I;
   if Num>0 then
   begin
@@ -1229,7 +1382,7 @@ begin
     begin
       Flag:=False;
       for K := 1 to 16 do
-        if Channels[I].Name=ChannelList[K] then
+        if Channels[I].Name=ChannelList[K].Name then
           Flag:=True;
       if not Flag then
         PCorePlugin^.LeaveChannel(User.Name, Channels[I].Name);
@@ -1244,14 +1397,14 @@ begin
     begin
       Flag:=False;
       for K := 1 to 16 do
-        if Channels[I].Name=ChannelList[K] then
+        if Channels[I].Name=ChannelList[K].Name then
           Flag:=True;
       if not Flag then
         PCorePlugin^.LeaveChannel(User.Name, Channels[I].Name);
     end;
     for K := 1 to 16 do
-      if ChannelList[K]<>'' then
-        PCorePlugin^.AddChannel(BOT_NAME, ChannelList[K], 0, 0);
+      if ChannelList[K].Name<>'' then
+        PCorePlugin^.AddChannel(BOT_NAME, ChannelList[K].Name, 0, 0);
   end
   else
   begin
@@ -1273,7 +1426,7 @@ var
 begin
   if not (Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1)) and (Copy(User.Name, 1, Length(name_prefix))<>name_prefix) then
   begin
-    if IniUsers.ReadInteger('Message', CheckStr(User.Name), 0)<>2 then
+    if IniUsers.ReadInteger('Message', CheckStr(User.Name), 2)<>2 then
       IniUsers.DeleteKey('Message', CheckStr(User.Name));
     Index:=SU.ListNames.IndexOf(User.Name);
     if Index=-1 then
@@ -1320,7 +1473,7 @@ begin
         Flag:=False;
         while not Flag and (K<=16) do
         begin
-          Flag:=(ChannelList[K]=Restriction.channel) and (ChannelList[K]<>'');
+          Flag:=(ChannelList[K].Name=Restriction.channel) and (ChannelList[K].Name<>'');
           Inc(K);
         end;
         if Flag then
@@ -1353,7 +1506,7 @@ begin
         Flag:=False;
         while not Flag and (K<=16) do
         begin
-          Flag:=(ChannelList[K]=Restriction.channel) and (ChannelList[K]<>'');
+          Flag:=(ChannelList[K].Name=Restriction.channel) and (ChannelList[K].Name<>'');
           Inc(K);
         end;
         if Flag then
@@ -1379,14 +1532,26 @@ var
 begin
   if Assigned(IgnorePrefixList) then
     FreeAndNil(IgnorePrefixList);
+  if Assigned(WhiteStartList) then
+    FreeAndNil(WhiteStartList);
+  
   IgnorePrefixList:=TStringList.Create;
   IgnorePrefixList.Clear;
+  WhiteStartList := TStringList.Create;
+  WhiteStartList.Clear;
   for I := 1 to 16 do
   begin
-    ChannelList[I]:=Ini.ReadString('Channels', 'Channel'+IntToStr(I), '');
+    ChannelList[I].Name:=Ini.ReadString('Channels', 'Channel'+IntToStr(I), '');
+    ChannelList[I].Permanent := (ChannelList[I].Name <> '');
+    ChannelList[I].Owner:=Ini.ReadString('Channels', 'Owner'+IntToStr(I), '');
+
     S:=Ini.ReadString('IgnorePrefixes', 'Prefix'+IntToStr(I), '');
     if S<>'' then
       IgnorePrefixList.Add(S);
+
+    S:=Ini.ReadString('Channels', 'WhiteStart'+IntToStr(I), '');
+    if S<>'' then
+      WhiteStartList.Add(S);
   end;
   CONNECT_IP:=Ini.ReadString('Linker', 'ConnectIP', '127.0.0.1');
   CONNECT_PORT:=Ini.ReadInteger('Linker', 'ConnectPort', 6538);
@@ -1418,18 +1583,25 @@ begin
   begin
   	Flag:=False;
     for K := 1 to 16 do
-    	if Channels[I].Name=ChannelList[K] then
+    	if Channels[I].Name=ChannelList[K].Name then
       	Flag:=True;
     if not Flag then
     	PCorePlugin^.LeaveChannel(BOT_NAME, Channels[I].Name);
   end;
   for K := 1 to 16 do
-  	if ChannelList[K]<>'' then
-    	PCorePlugin^.AddChannel(BOT_NAME, ChannelList[K], 0, 0);
+  	if ChannelList[K].Name<>'' then
+    	PCorePlugin^.AddChannel(BOT_NAME, ChannelList[K].Name, 0, 0);
 end;
 
 procedure Destroy();
+var
+	I: Integer;
 begin
+	if Connected then
+  	for I := 1 to 16 do
+    begin
+    	CheckAndCloseChan(I);
+    end;
   SU.Free;
   {$IFNDEF Server}
   RC.Free;
