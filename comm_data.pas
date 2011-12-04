@@ -217,6 +217,7 @@ var
   StartKey, MultKey, AddKey: Integer;
 
   name_prefix: String;
+  name_postfix: String;
   config_dir:String;
 
   file_log: String;

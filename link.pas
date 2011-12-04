@@ -192,11 +192,11 @@ begin
 		SU.TimerBans.Enabled:=False;
 		SU.Timer.Enabled:=False;
 		SU.ListNames.Clear;
-		Count:=PCorePlugin^.AskUsersInChat(Users);
-		for I := 1 to Count do
-			if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and  (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1)  then
-				SU.ListNames.Add(Users[I].Name);
-		SU.Timer.Enabled:=True;
+		//Count:=PCorePlugin^.AskUsersInChat(Users);
+		//for I := 1 to Count do
+		//	if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and  (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1)  then
+		//		SU.ListNames.Add(Users[I].Name);
+		//SU.Timer.Enabled:=True;
 		//AddKey:=Random(2000000000);
 		//Self.SendText(IntToStr(AddKey),'K');
 		//DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
@@ -454,18 +454,18 @@ begin
               Pass:=Pass+RandomStr[Random(Length(RandomStr))+1];
             IniUsers.WriteString('Users',CheckStr(Name), Pass);
           end;
-          PCorePlugin^.JoinVirtualUser(name_prefix+Name,Text,0,Pass, Icon, Channel);
+          PCorePlugin^.JoinVirtualUser(name_prefix+Name+name_postfix,Text,0,Pass, Icon, Channel);
         end;
       LNK_CODE_LEFT:
         begin
           Name:=StrToText(Str,P);
-          Index:=VUNames.IndexOf(name_prefix+Name);
+          Index:=VUNames.IndexOf(name_prefix+Name+name_postfix);
           if Index<>-1 then
-            VUNames.Delete(VUNames.IndexOf(name_prefix+Name));
-          Count:=PCorePlugin^.AskUserChannels(name_prefix+Name, Channels);
+            VUNames.Delete(VUNames.IndexOf(name_prefix+Name+name_postfix));
+          Count:=PCorePlugin^.AskUserChannels(name_prefix+Name+name_postfix, Channels);
           for I := 1 to Count do
-            PCorePlugin^.LeaveChannel(name_prefix+Name, Channels[I].Name);
-          PCorePlugin^.LeaveVirtualUser(name_prefix+Name);
+            PCorePlugin^.LeaveChannel(name_prefix+Name+name_postfix, Channels[I].Name);
+          PCorePlugin^.LeaveVirtualUser(name_prefix+Name+name_postfix);
         end;
       LNK_CODE_JOINCHAN:
         begin
@@ -480,7 +480,7 @@ begin
           //  Sock.SendText(DataToSend);
           //end
           //else
-            PCorePlugin^.AddChannel(name_prefix+Name,Channel,0,0);
+            PCorePlugin^.AddChannel(name_prefix+Name+name_postfix,Channel,0,0);
         end;
       LNK_CODE_LEFTCHAN:
         begin
@@ -489,7 +489,7 @@ begin
           if not I in [1..16] then
             Exit;
           Channel:=ChannelList[I].Name;
-          PCorePlugin^.LeaveChannel(name_prefix+Name,Channel);
+          PCorePlugin^.LeaveChannel(name_prefix+Name+name_postfix,Channel);
         end;
       LNK_CODE_CMSG:
         begin
@@ -500,8 +500,8 @@ begin
           Channel:=ChannelList[I].Name;
           Text:=StrToText(Str,P);
           Icon:=StrToWord(Str, P);
-          PCorePlugin^.AddChannel(name_prefix+Name,Channel,0,0);
-          PCorePlugin^.AddMessageToChannel(name_prefix+Name, Channel, Icon, Text);
+          PCorePlugin^.AddChannel(name_prefix+Name+name_postfix,Channel,0,0);
+          PCorePlugin^.AddMessageToChannel(name_prefix+Name+name_postfix, Channel, Icon, Text);
         end;
       LNK_CODE_CIMG:
         begin
@@ -514,8 +514,8 @@ begin
           if (Image <> nil) then
           begin
           	try
-          		PCorePlugin^.AddChannel(name_prefix+Name,Channel,0,0);
-          		PCorePlugin^.AddImageToChannel(name_prefix+Name, Channel, Image);
+          		PCorePlugin^.AddChannel(name_prefix+Name+name_postfix,Channel,0,0);
+          		PCorePlugin^.AddImageToChannel(name_prefix+Name+name_postfix, Channel, Image);
             finally
             	Image.Free;
             end;
@@ -527,7 +527,7 @@ begin
           Channel:=StrToText(Str,P);
           Text:=StrToText(Str,P);
           Icon:=StrToWord(Str, P);
-          PCorePlugin^.AddPrivateMessage(name_prefix+Name, Icon, Channel, Text);
+          PCorePlugin^.AddPrivateMessage(name_prefix+Name+name_postfix, Icon, Channel, Text);
         end;
       LNK_CODE_PRIVIMG:
         begin
@@ -537,7 +537,7 @@ begin
           if (Image <> nil) then
           begin
           	try
-          		PCorePlugin^.AddPrivateImage(name_prefix+Name, Channel, Image);
+          		PCorePlugin^.AddPrivateImage(name_prefix+Name+name_postfix, Channel, Image);
             finally
             	Image.Free;
             end;
@@ -548,13 +548,13 @@ begin
           Name:=StrToText(Str,P);
           Channel:=StrToText(Str,P);
           Text:=StrToText(Str,P);
-          PCorePlugin^.AddPersonalMessage(name_prefix+Name, 0, Channel, Text);
+          PCorePlugin^.AddPersonalMessage(name_prefix+Name+name_postfix, 0, Channel, Text);
         end;
       LNK_CODE_STATUSCHNG:
         begin
           Name:=StrToText(Str,P);
           Text:=StrToText(Str,P);
-          PCorePlugin^.AddState(name_prefix+Name, Text);
+          PCorePlugin^.AddState(name_prefix+Name+name_postfix, Text);
         end;
 
       LNK_CODE_BAN:
@@ -634,10 +634,10 @@ begin
       LNK_CODE_SERVICE_UCSCHECK:
         begin
           Name:=StrToText(Str,P);
-          if VUNames.IndexOf(name_prefix+Name)=-1 then
+          if VUNames.IndexOf(name_prefix+Name+name_postfix)=-1 then
             DataToSend:=WordToStr(LNK_CODE_SERVICE_UCSREPLY)+TextToStr(Name)+WordToStr(1)+TextToStr('') // сервисное сообщение на другой сервер
           else
-            DataToSend:=WordToStr(LNK_CODE_SERVICE_UCSREPLY)+TextToStr(Name)+WordToStr(0)+TextToStr(name_prefix+Name); // сервисное сообщение на другой сервер
+            DataToSend:=WordToStr(LNK_CODE_SERVICE_UCSREPLY)+TextToStr(Name)+WordToStr(0)+TextToStr(name_prefix+Name+name_postfix); // сервисное сообщение на другой сервер
           Sock.SendText(DataToSend);
         end;
 
@@ -917,7 +917,9 @@ begin
   	SendCount:=0;
   	for I := 1 to Count do
   	begin
-    	if (Restrictions[I].date>=LastUpdate) and (Copy(Restrictions[I].Name, 1, Length(name_prefix))=name_prefix) and (Restrictions[I].ident>2) then
+    	if (Restrictions[I].date>=LastUpdate) and
+      		StrStartsWith(Restrictions[I].Name, name_prefix) and StrEndsWith(Restrictions[I].Name, name_postfix) and
+          (Restrictions[I].ident>2) then
       	if Restrictions[I].banType>=2 then
       	begin
         	K:=1;
@@ -929,7 +931,7 @@ begin
           end;
         	if Flag then
         	begin
-          	DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(K-1)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
+          	DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)-Length(name_postfix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(K-1)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
           	Inc(SendCount);
         	end;
       	end;
@@ -1025,7 +1027,7 @@ begin
   Index:=VUNames.IndexOf(Name);
   if Index<>-1 then
     VUNames.Delete(Index);
-  Name2:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix));
+  Name2:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix)-Length(name_postfix));
   case Reason of
      0: // превышено максимальное число подключенных пользователей
        begin
@@ -1218,7 +1220,7 @@ begin
     DataToSend:=WordToStr(LNK_CODE_JOIN)+TextToStr(User.Name)+TextToStr(User.IP)+WordToStr(User.sex)+TextToStr(PCorePlugin^.AskID(User.Name));
     Sock.SendText(DataToSend);
   end;
-  Name:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix));
+  Name:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix)-Length(name_postfix));
   DataToSend:=WordToStr(LNK_CODE_PRIV)+TextToStr(User.Name)+TextToStr(Name)+TextToStr(Text)+WordToStr(Regime);
   Sock.SendText(DataToSend);
 end;
@@ -1245,7 +1247,7 @@ begin
     DataToSend:=WordToStr(LNK_CODE_JOIN)+TextToStr(User.Name)+TextToStr(User.IP)+WordToStr(User.sex)+TextToStr(PCorePlugin^.AskID(User.Name));
     Sock.SendText(DataToSend);
   end;
-  Name:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix));
+  Name:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix)-Length(name_postfix));
   DataToSend:=WordToStr(LNK_CODE_PRIVIMG)+TextToStr(User.Name)+TextToStr(Name)+ImgToStr(Image);
   Sock.SendText(DataToSend);
 end;
@@ -1318,7 +1320,7 @@ begin
     DataToSend:=WordToStr(LNK_CODE_JOIN)+TextToStr(User.Name)+TextToStr(User.IP)+WordToStr(User.sex)+TextToStr(PCorePlugin^.AskID(User.Name));
     Sock.SendText(DataToSend);
   end;
-  Name:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix));
+  Name:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix)-Length(name_postfix));
   DataToSend:=WordToStr(LNK_CODE_PMSG)+TextToStr(User.Name)+TextToStr(Name)+TextToStr(Text);
   Sock.SendText(DataToSend);
 end;
@@ -1374,7 +1376,7 @@ var
 begin
 
   //if Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1) then
-  if Copy(User.Name, 1, Length(name_prefix))=name_prefix then
+  if StrStartsWith(User.Name, name_prefix) and StrEndsWith(User.Name, name_postfix) then
   begin
     VUNames.Add(User.Name);
     Len:=PCorePlugin^.AskUserChannels(User.Name,Channels);
@@ -1387,7 +1389,7 @@ begin
       if not Flag then
         PCorePlugin^.LeaveChannel(User.Name, Channels[I].Name);
     end;
-    DataToSend:=WordToStr(LNK_CODE_SERVICE_CONNECTION_OK)+TextToStr(Copy(User.Name, Length(name_prefix)+1,Length(User.Name)-Length(name_prefix)));
+    DataToSend:=WordToStr(LNK_CODE_SERVICE_CONNECTION_OK)+TextToStr(Copy(User.Name, Length(name_prefix)+1,Length(User.Name)-Length(name_prefix)-Length(name_postfix)));
     Sock.SendText(DataToSend);
   end
   else if User.Name=BOT_NAME then
@@ -1424,7 +1426,8 @@ var
   DataToSend: String;
   Index: LongInt;
 begin
-  if not (Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1)) and (Copy(User.Name, 1, Length(name_prefix))<>name_prefix) then
+  if not (Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1)) and
+  	not (StrStartsWith(User.Name, name_prefix) and StrEndsWith(User.Name, name_postfix)) then
   begin
     if IniUsers.ReadInteger('Message', CheckStr(User.Name), 2)<>2 then
       IniUsers.DeleteKey('Message', CheckStr(User.Name));
@@ -1466,7 +1469,7 @@ var
   Flag:Boolean;
 begin
   DataToSend:='';
-  if (Copy(Restriction.Name, 1, Length(name_prefix))=name_prefix) and (Restriction.ident>2) then
+  if StrStartsWith(Restriction.Name, name_prefix) and StrEndsWith(Restriction.Name, name_postfix) and (Restriction.ident>2) then
       if Restriction.banType>=2 then
       begin
         K:=1;
@@ -1478,7 +1481,7 @@ begin
         end;
         if Flag then
         begin
-          DataToSend:=TextToStr(Copy(Restriction.Name, Length(name_prefix)+1, Length(Restriction.Name)-Length(name_prefix)))+DoubleToStr(Restriction.Remain)+DWordToStr(Restriction.Ident)+DwordToStr(Restriction.banType)+WordToStr(K-1)+TextToStr(Restriction.moder)+TextToStr(Restriction.Reason);
+          DataToSend:=TextToStr(Copy(Restriction.Name, Length(name_prefix)+1, Length(Restriction.Name)-Length(name_prefix)-Length(name_postfix)))+DoubleToStr(Restriction.Remain)+DWordToStr(Restriction.Ident)+DwordToStr(Restriction.banType)+WordToStr(K-1)+TextToStr(Restriction.moder)+TextToStr(Restriction.Reason);
         end;
       end;
       {else
@@ -1499,7 +1502,7 @@ var
   Flag:Boolean;
 begin
   DataToSend:='';
-  if (Copy(Restriction.Name, 1, Length(name_prefix))=name_prefix) and (Restriction.ident>2) then
+  if StrStartsWith(Restriction.Name, name_prefix) and StrEndsWith(Restriction.Name, name_postfix) and (Restriction.ident>2) then
   		if Restriction.banType>=2 then
       begin
         K:=1;
@@ -1511,7 +1514,7 @@ begin
         end;
         if Flag then
         begin
-          DataToSend:=TextToStr(Copy(Restriction.Name, Length(name_prefix)+1, Length(Restriction.Name)-Length(name_prefix)))+DWordToStr(Restriction.Ident)+DwordToStr(Restriction.banType)+WordToStr(K-1)+TextToStr(UnBanModerName)+TextToStr(Restriction.Reason);
+          DataToSend:=TextToStr(Copy(Restriction.Name, Length(name_prefix)+1, Length(Restriction.Name)-Length(name_prefix)-Length(name_postfix)))+DWordToStr(Restriction.Ident)+DwordToStr(Restriction.banType)+WordToStr(K-1)+TextToStr(UnBanModerName)+TextToStr(Restriction.Reason);
         end;
       end;
       {else
@@ -1556,9 +1559,16 @@ begin
   CONNECT_IP:=Ini.ReadString('Linker', 'ConnectIP', '127.0.0.1');
   CONNECT_PORT:=Ini.ReadInteger('Linker', 'ConnectPort', 6538);
   SERVER_LOCAL:=Ini.ReadString('Linker', 'ServerName', 'MyServer');
-  name_prefix:=Ini.ReadString('Linker', 'NamePrefix', Chr($13DE));
-  StartKey:=Ini.ReadInteger('Keys', 'MainKey', Random(2000000000));
-  Ini.WriteInteger('Keys', 'MainKey', StartKey);
+  name_prefix:=Ini.ReadString('Linker', 'NamePrefix', '');
+  name_postfix:=Ini.ReadString('Linker', 'NamePostfix', '[Lk]');
+  if (name_prefix='') and (name_postfix='') then
+  	name_postfix := '[Lk]';
+  StartKey:=Ini.ReadInteger('Keys', 'MainKey', 0);
+  if (StartKey = 0) then
+  begin
+  	StartKey :=  Random(2000000000) + 10;
+  	Ini.WriteInteger('Keys', 'MainKey', StartKey);
+  end;
 end;
 
 function Init():Integer;

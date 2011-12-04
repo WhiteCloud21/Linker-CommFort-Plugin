@@ -41,7 +41,11 @@ uses
   function unCheckStr(Str : String): String;
   function GetRandomTextFromIni(FileName:String; TextId : String): String;
 
+  function StrStartsWith(Source: String; LeftStr: String): Boolean;
+  function StrEndsWith(Source: String; RightStr: String): Boolean;
+
   procedure Pause(time: Cardinal);
+  function GetConfigFullName(FileName: string): string;
 
 implementation
 
@@ -351,6 +355,22 @@ begin
       Result:=360;
 end;
 
+function StrStartsWith(Source: String; LeftStr: String): Boolean;
+var
+	Len : Integer;
+begin
+	Len := Length(LeftStr);
+  Result := (Len = 0) or (Copy(Source, 1, Len) = LeftStr);
+end;
+
+function StrEndsWith(Source: String; RightStr: String): Boolean;
+var
+	Len : Integer;
+begin
+	Len := Length(RightStr);
+  Result := (Len = 0) or (Copy(Source, Length(Source) - Len + 1, Len) = RightStr);
+end;
+
 procedure Pause(time: Cardinal);
 var
   Buf: TBytes;
@@ -359,6 +379,16 @@ begin
   SetLength(Buf, 4);
   CopyMemory(@Buf[0], @time, 4);
   MsgQueue.InsertMsg(QUEUE_MSGTYPE_PAUSE, Buf, 4);
+end;
+
+function GetConfigFullName(FileName: string): string;
+begin
+  // Сначала пытаемся загрузить файлы из директории с временными файлами плагинов
+	Result:=config_dir +'\' + FileName;
+  if not FileExists(Result) then
+    Result:=ExtractFilePath(ParamStr(0))+'Plugins\' + PLUGIN_FILENAME + '\' + FileName;
+  if not FileExists(Result) then
+    Result:=ExtractFilePath(ParamStr(0))+'Plugins\Linker\' + FileName;
 end;
 
 end.

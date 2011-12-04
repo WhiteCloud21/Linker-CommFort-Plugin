@@ -48,19 +48,22 @@ begin
   inherited;
   try
     Randomize;
-    config_dir:=ExtractFilePath(ParamStr(0))+'Plugins\'+PLUGIN_FILENAME;
+    config_dir:=CorePlugin.AskPluginTempPath+PLUGIN_FILENAME;
     if not DirectoryExists(config_dir) then
       CreateDir(config_dir);
-
+		
     StrList:=TStringList.Create;
     StrList.Add(';Файл автоматически создан '+DateTimeToStr(Now));
-    file_config:=config_dir+'\config.ini';
+		
+    file_config := GetConfigFullName('config.ini');
+		
     file_users:=config_dir+'\users.ini';
-    file_log:=config_dir+'\error.log';
-    if not FileExists(file_log) then
-      StrList.SaveToFile(file_log, TEncoding.Unicode);
     if not FileExists(file_users) then
       StrList.SaveToFile(file_users, TEncoding.Unicode);
+  
+	  file_log:=config_dir+'\error.log';
+    if not FileExists(file_log) then
+      StrList.SaveToFile(file_log, TEncoding.Unicode);
 
     PCorePlugin:= @CorePlugin;
 
