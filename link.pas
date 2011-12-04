@@ -159,6 +159,8 @@ end;
 
 procedure TLinkSocket.SendText(Str: string; EncType:Char='E');
 begin
+	if not Connected then Exit;
+  
   if EncType='E' then
     Str:=EncType+Encrypt(Str, StartKey, MultKey, AddKey)
   else
