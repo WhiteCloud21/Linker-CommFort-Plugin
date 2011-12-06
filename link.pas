@@ -159,10 +159,11 @@ end;
 
 procedure TLinkSocket.SendText(Str: string; EncType:Char='E');
 begin
-	if not Connected then Exit;
-  
   if EncType='E' then
-    Str:=EncType+Encrypt(Str, StartKey, MultKey, AddKey)
+  begin
+    if not Connected then Exit;
+    Str:=EncType+Encrypt(Str, StartKey, MultKey, AddKey);
+  end
   else
     Str:=EncType+Str;
   SendLongText(ConnS, Str);
@@ -178,8 +179,6 @@ end;
 {$IFDEF Server}
 procedure TLinkSocket.ServerSocketAccept(Sender: TObject; Socket: TCustomWinSocket);
 var
-	Users: TUsers;
-	Count, I: DWord;
 	DataToSend: String;
 begin
 	if Socket.RemoteAddress<>CONNECT_IP then
@@ -189,6 +188,8 @@ begin
 	end
 	else
 	begin
+		if ConnS <> nil then
+			ConnS.Close;
 		ConnS:=Socket;
 		VUNames.Clear;
 		SU.TimerBans.Enabled:=False;
@@ -206,10 +207,10 @@ begin
 		//SU.LastUpdate:=0;
 		//SU.TimerBans.Enabled:=True;
 		//Connected:=True;
-    LbRSA1.GenerateKeyPair;
-    DataToSend:=DwordToStr(PROTOCOL_VER)+TextToStr(LbRSA1.PublicKey.ModulusAsString)+TextToStr(LbRSA1.PublicKey.ExponentAsString);
-    Self.SendText(DataToSend, 'K');
-  end;
+		LbRSA1.GenerateKeyPair;
+		DataToSend:=DwordToStr(PROTOCOL_VER)+TextToStr(LbRSA1.PublicKey.ModulusAsString)+TextToStr(LbRSA1.PublicKey.ExponentAsString);
+		Self.SendText(DataToSend, 'K');
+	end;
 end;
 
 {$ELSE}
@@ -237,6 +238,17 @@ begin
   	SU.TimerBans.Enabled:=False;
     SU.Timer.Enabled:=False;
     SU.ListNames.Clear;
+    Connected:=True;
+
+    Count:=PCorePlugin^.AskUsersInChat(Users);
+    for I := 1 to Count do
+      if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1) then
+        SU.ListNames.Add(Users[I].Name);
+    SU.LastUpdate:=0;
+    SU.Timer.Enabled:=True;
+    SU.TimerBans.Enabled:=True;
+
+    // Отправка информации о сервере
     DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
     Self.SendText(DataToSend);
 
@@ -253,20 +265,12 @@ begin
     end;
     DataToSend:=WordToStr(LNK_CODE_SERVICE_TEMPCHANLIST)+WordToStr(Count)+DataToSend;
     Self.SendText(DataToSend);
-
-    Count:=PCorePlugin^.AskUsersInChat(Users);
-    for I := 1 to Count do
-      if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1) then
-        SU.ListNames.Add(Users[I].Name);
-    SU.LastUpdate:=0;
-    SU.Timer.Enabled:=True;
-    SU.TimerBans.Enabled:=True;
-    Connected:=True;
   except
     on e:Exception do
     begin
       Text:='--------------OnKeysReceiveException--------'+Chr(13)+Chr(10);
       PCorePlugin^.onError(PCorePlugin^, e, Text);
+      Connected := false;
     end;
   end;
 end;
@@ -281,6 +285,7 @@ begin
   	try
   		ConnS:=nil;
   		Connected:=False;
+		LongDataTransfer.FlushBuffers;
   		SU.Timer.Enabled:=False;
   		SU.ListNames.Clear;
   		for I := 0 to VUNames.Count - 1 do
@@ -300,19 +305,20 @@ procedure TLinkSocket.ClientSocketDisconnect(Sender: TObject; Socket: TCustomWin
 var I: LongInt;
 begin
 	try
-  	ConnS:=nil;
-  	Connected:=False;
-  	SU.Timer.Enabled:=False;
-  	SU.ListNames.Clear;
-  	for I := 0 to VUNames.Count - 1 do
-    	PCorePlugin^.LeaveVirtualUser(VUNames[I]);
-  	VUNames.Clear;
-  	SU.TimerBans.Enabled:=False;
-  	PCorePlugin^.AddState(BOT_NAME, '');
-  except
-    on e:Exception do
-      PCorePlugin^.onError(PCorePlugin^, e, '--------------OnDisconnectException--------'+Chr(13)+Chr(10));
-  end;
+		ConnS:=nil;
+		Connected:=False;
+		LongDataTransfer.FlushBuffers;
+		SU.Timer.Enabled:=False;
+		SU.ListNames.Clear;
+		for I := 0 to VUNames.Count - 1 do
+			PCorePlugin^.LeaveVirtualUser(VUNames[I]);
+		VUNames.Clear;
+		SU.TimerBans.Enabled:=False;
+		PCorePlugin^.AddState(BOT_NAME, '');
+	except
+		on e:Exception do
+			PCorePlugin^.onError(PCorePlugin^, e, '--------------OnDisconnectException--------'+Chr(13)+Chr(10));
+	end;
 end;
 {$ENDIF}
 

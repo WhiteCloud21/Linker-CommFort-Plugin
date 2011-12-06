@@ -53,6 +53,7 @@ type
 function SendLongText(Socket: TCustomWinSocket; S: string): boolean;
 function ReceiveLongText(Socket: TCustomWinSocket; MySProc: TMySProc;
   SafeCalledStr: string = ''): boolean;
+procedure FlushBuffers;
 //function ReceiveLongText(Socket: TCustomWinSocket; MySProc: TMySProc;
 //  SafeCalledStr: AnsiString = ''): boolean;
 
@@ -100,7 +101,7 @@ begin
     if SafeCalledStr = '' then
     begin
       RDSize := Socket.ReceiveLength;
-      if RDSize=0 then begin
+      if RDSize < 2 then begin
         Result:=False;
         Exit;
       end;
@@ -119,6 +120,11 @@ begin
     end;
     if InputBuf = '' then
     begin //Самый первый пакет;
+    	if Length(S)< 2 then // фрагментирован заголовок
+      begin
+      	InputBuf := S;
+        Exit;
+      end;
       CopyMemory(@InputDataSize, @S[1], 4);
       //MessageBox(0, PChar('First: '+IntToStr(RDSize)+' '+IntToStr(InputReceivedSize)+' '+IntToStr(InputDataSize)), '', 0);
       if InputDataSize = RDSize div 2 - 2 then
