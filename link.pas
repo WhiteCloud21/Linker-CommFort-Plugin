@@ -154,6 +154,7 @@ begin
     FreeAndNil(S);
     FreeAndNil(LbRSA1);
     ConnS:=nil;
+    Connected := False;
   end;
 end;
 
@@ -189,7 +190,11 @@ begin
 	else
 	begin
 		if ConnS <> nil then
+    begin
 			ConnS.Close;
+      Socket.Close;
+      Exit;
+    end;
 		ConnS:=Socket;
 		VUNames.Clear;
 		SU.TimerBans.Enabled:=False;
@@ -285,7 +290,7 @@ begin
   	try
   		ConnS:=nil;
   		Connected:=False;
-		LongDataTransfer.FlushBuffers;
+			LongDataTransfer.FlushBuffers;
   		SU.Timer.Enabled:=False;
   		SU.ListNames.Clear;
   		for I := 0 to VUNames.Count - 1 do
@@ -452,6 +457,9 @@ begin
       LNK_CODE_JOIN:
         begin
           Name:=StrToText(Str,P);
+          if StrEndsWith(Name, '[Lk]') or StrEndsWith(Name, '[Lk2]')
+          	or StrEndsWith(Name, '[Lk3]') or StrEndsWith(Name, '[Lk4]') then
+            	Exit;
           Text:=StrToText(Str,P); //IP
           Icon:=StrToWord(Str, P);
           Channel:=StrToText(Str, P); //CompID
@@ -1215,11 +1223,12 @@ begin
     onPersonalMsg(Name, User, Text);
     Exit;
   end;
-  if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=0) then
-  begin
-    PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для написания приватных сообщений пользователям сервера '+SERVER_REMOTE+' необходимо подключиться к серверу. Напишите мне "connect" для подключения.');
-    Exit;
-  end;
+  ConnectUser(User);
+  //if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=0) then
+  //begin
+  //  PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для написания приватных сообщений пользователям сервера '+SERVER_REMOTE+' необходимо подключиться к серверу. Напишите мне "connect" для подключения.');
+  //  Exit;
+  //end;
   Index:=SU.ListNames.IndexOf(User.Name);
   if Index<>-1 then
   begin
@@ -1242,11 +1251,12 @@ begin
   begin
     Exit;
   end;
-  if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=0) then
-  begin
-    PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для написания приватных сообщений пользователям сервера '+SERVER_REMOTE+' необходимо подключиться к серверу. Напишите мне "connect" для подключения.');
-    Exit;
-  end;
+  ConnectUser(User);
+  //if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=0) then
+  //begin
+  //  PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для написания приватных сообщений пользователям сервера '+SERVER_REMOTE+' необходимо подключиться к серверу. Напишите мне "connect" для подключения.');
+  //  Exit;
+  //end;
   Index:=SU.ListNames.IndexOf(User.Name);
   if Index<>-1 then
   begin
@@ -1313,6 +1323,15 @@ begin
       PCorePlugin^.StopPlugin;
       Exit;
     end;
+    if (Text='починись') and IsAdmin(User.Name) then
+    begin
+    	{$IFNDEF Server}
+      if Sock.S.Active then
+      	Sock.S.Close;
+      Sock.S.Open;
+      {$ENDIF}
+      Exit;
+    end;
     Exit;
   end;
   if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=0) then
@@ -1345,16 +1364,16 @@ begin
   if Num>0 then
   begin
   	ConnectUser(User);
-    if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=1) then
-    begin
+    //if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=1) then
+    //begin
       DataToSend:=WordToStr(LNK_CODE_JOINCHAN)+TextToStr(User.Name)+WordToStr(Num);
       Sock.SendText(DataToSend);
-    end
-    else
-    begin
-      PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, User.Name, Channel, 'Для доступа к каналу необходимо подключиться к серверу '+SERVER_REMOTE);
-      PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для подключения к серверу напишите мне "connect"');
-    end;
+    //end
+    //else
+    //begin
+    //  PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, User.Name, Channel, 'Для доступа к каналу необходимо подключиться к серверу '+SERVER_REMOTE);
+    //  PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для подключения к серверу напишите мне "connect"');
+    //end;
   end;
 end;
 
@@ -1627,6 +1646,7 @@ begin
   Sock.Free;
   IniUsers.Free;
   Connected:=False;
+  LongDataTransfer.FlushBuffers;
 end;
 
 end.

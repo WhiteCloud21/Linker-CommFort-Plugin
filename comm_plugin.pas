@@ -65,6 +65,10 @@ begin
     if not FileExists(file_log) then
       StrList.SaveToFile(file_log, TEncoding.Unicode);
 
+	  file_debug:=config_dir+'\debug.log';
+    if not FileExists(file_debug) then
+      StrList.SaveToFile(file_debug, TEncoding.Unicode);
+
     PCorePlugin:= @CorePlugin;
 
     // ”казываем метод, который будет вызыватьс€ при ошибке

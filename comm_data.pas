@@ -190,7 +190,7 @@ const
   LNK_CODE_SERVICE_CREATECHANNEL= 20510;
   LNK_CODE_SERVICE_CLOSECHANNEL = 20511;
 
-  PLU_VER  = '0.0.6';
+  PLU_VER  = '0.1.0';
   PROTOCOL_VER : DWord = 3;
 
   {$IFDEF Server}
@@ -220,6 +220,7 @@ var
   name_postfix: String;
   config_dir:String;
 
+  file_debug: String;
   file_log: String;
   file_config: String;
   file_users: String;
