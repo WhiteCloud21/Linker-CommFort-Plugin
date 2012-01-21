@@ -51,16 +51,11 @@ uses Windows, SysUtils, Classes, ScktComp, comm_info, comm_data;
 type
   TMySProc = procedure(const S: String);
 function SendLongText(Socket: TCustomWinSocket; S: string): boolean;
-{function ReceiveLongText(Socket: TCustomWinSocket; MySProc: TMySProc;
-  SafeCalledStr: string = ''): boolean;}
 function ReceiveLongText(Socket: TCustomWinSocket; MySProc: TMySProc;
   SafeCalledStr: AnsiString = ''): boolean;
 procedure FlushBuffers;
-//function ReceiveLongText(Socket: TCustomWinSocket; MySProc: TMySProc;
-//  SafeCalledStr: AnsiString = ''): boolean;
 
 var
-  //InputBuf: AnsiString;
   InputBuf: AnsiString;
   InputDataSize: LongWord;
   InputReceivedSize: LongWord;
@@ -70,7 +65,6 @@ implementation
 function SendLongText(Socket: TCustomWinSocket; S: string): boolean;
 var
   TextSize: DWord;
-  //TSSig: String;
   SendStream: TMemoryStream;
 begin
   Result := True;
@@ -78,10 +72,6 @@ begin
     if not Socket.Connected then
       Exit;
     TextSize := Length(S);
-    //TSSig:='  ';
-    //CopyMemory(@TSSig[1], @TextSize, 4);
-    //S := TSSig + S;
-    //Socket.SendBuf(PChar(S)^, TextSize*2);
     SendStream := TMemoryStream.Create;
     SendStream.WriteBuffer(TextSize, 4);
     SendStream.WriteBuffer(PChar(S)^, TextSize * 2);
@@ -97,103 +87,6 @@ begin
   InputDataSize := 0;
   InputReceivedSize := 0;
 end;
-
-{function ReceiveLongText(Socket: TCustomWinSocket; MySProc: TMySProc;
-  SafeCalledStr: string = ''): boolean;
-var
-  S: string;
-  RDSize: LongWord;
-begin
-  Result := True;
-  try
-    if SafeCalledStr = '' then
-    begin
-      RDSize := Socket.ReceiveLength;
-      if RDSize < 2 then begin
-        Result:=False;
-        Exit;
-      end;
-      SetLength(S, RDSize div 2);
-      Socket.ReceiveBuf(S[1], RDSize - RDSize mod 2);
-    end
-    else
-    begin
-      S := SafeCalledStr;
-      RDSize := length(S)*2;
-    end;
-    if (Length(InputBuf) < 2) and (Length(InputBuf) > 0) then
-    begin //Корректировка, в том случае
-      S := InputBuf + S; //если фрагментирован сам заголовок
-      FlushBuffers; //блока данных
-    end;
-    if InputBuf = '' then
-    begin //Самый первый пакет;
-    	if Length(S)< 2 then // фрагментирован заголовок
-      begin
-      	InputBuf := S;
-        Exit;
-      end;
-      CopyMemory(@InputDataSize, @S[1], 4);
-      //MessageBox(0, PChar('First: '+IntToStr(RDSize)+' '+IntToStr(InputReceivedSize)+' '+IntToStr(InputDataSize)), '', 0);
-      if InputDataSize = RDSize div 2 - 2 then
-      begin //Один блок в пакете
-
-        InputBuf := Copy(S, 3, RDSize div 2 - 2); //ни слепки, ни фрагментации нет.
-        MySProc(InputBuf);
-        FlushBuffers;
-        Exit;
-      end;
-      if InputDataSize < RDSize div 2 - 2 then
-      begin //Пакет слеплен.
-        //MessageBox(0, PChar(IntToStr(RDSize)+' '+IntToStr(InputReceivedSize)+' '+IntToStr(InputDataSize)), '', 0);
-        InputBuf := Copy(S, 3, InputDataSize);
-        MySProc(InputBuf);
-        Delete(S, 1, InputDataSize + 2);
-        FlushBuffers;
-        ReceiveLongText(Socket, MySProc, S);
-        Exit;
-      end;
-      if InputDataSize > RDSize div 2 - 2 then
-      begin //это ПЕРВЫЙ фрагмент
-        InputBuf := Copy(S, 3, RDSize div 2 - 2); //большого пакета
-        InputReceivedSize := RDSize div 2 - 2;
-      end;
-    end
-    else
-    begin //Буфер приема не пуст
-      //InputBuf:=
-      //MessageBox(0, PChar('NOT First: '+IntToStr(RDSize)+' '+IntToStr(InputReceivedSize)+' '+IntToStr(InputDataSize)), '', 0);
-
-      if RDSize div 2 + InputReceivedSize = InputDataSize then
-      begin //Получили последний
-        InputBuf := InputBuf + Copy(S, 1, RDSize div 2); //фрагмент целиком
-        MySProc(InputBuf); //в пакете, данных
-        FlushBuffers; // в пакете больше нет
-        Exit;
-      end;
-      if RDSize div 2 + InputReceivedSize < InputDataSize then // Получили
-      begin //очередной
-        InputBuf := InputBuf + Copy(S, 1, RDSize div 2); //фрагмент
-        InputReceivedSize := InputReceivedSize + RDSize div 2;
-        Exit;
-      end;
-      if RDSize div 2 + InputReceivedSize > InputDataSize then //Поледний фрагмент
-      begin // но в пакете есть еще данные - слеплен.
-        //MessageBox(0, PChar(IntToStr(RDSize)+' '+IntToStr(InputReceivedSize)+' '+IntToStr(InputDataSize)), '', 0);
-        InputBuf := InputBuf + Copy(S, 1, InputDataSize - InputReceivedSize);
-        MySProc(InputBuf);
-        Delete(S, 1, InputDataSize - InputReceivedSize);
-        FlushBuffers;
-        ReceiveLongText(Socket, MySProc, S);
-      end;
-    end;
-  except
-    begin
-  		Result := False;
-    end;
-  end;
-  SetLength(S, 0);
-end;}
 
 procedure CallSFunc(MySProc: TMySProc; Str: AnsiString); inline;
 var

@@ -200,18 +200,6 @@ begin
 		SU.TimerBans.Enabled:=False;
 		SU.Timer.Enabled:=False;
 		SU.ListNames.Clear;
-		//Count:=PCorePlugin^.AskUsersInChat(Users);
-		//for I := 1 to Count do
-		//	if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and  (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1)  then
-		//		SU.ListNames.Add(Users[I].Name);
-		//SU.Timer.Enabled:=True;
-		//AddKey:=Random(2000000000);
-		//Self.SendText(IntToStr(AddKey),'K');
-		//DataToSend:=WordToStr(LNK_CODE_SERVICE_SERVERNAME)+TextToStr(SERVER_LOCAL);
-		//Self.SendText(DataToSend);
-		//SU.LastUpdate:=0;
-		//SU.TimerBans.Enabled:=True;
-		//Connected:=True;
 		LbRSA1.GenerateKeyPair;
 		DataToSend:=DwordToStr(PROTOCOL_VER)+TextToStr(LbRSA1.PublicKey.ModulusAsString)+TextToStr(LbRSA1.PublicKey.ExponentAsString);
 		Self.SendText(DataToSend, 'K');
@@ -222,8 +210,6 @@ end;
 
 procedure TLinkSocket.ClientSocketConnect(Sender: TObject; Socket: TCustomWinSocket);
 begin
-  //SU.LastUpdate:=0;
-  //SU.TimerBans.Enabled:=True;
   ConnS:=S.Socket;
   SU.TimerBans.Enabled:=False;
   SU.Timer.Enabled:=False;
@@ -375,8 +361,6 @@ begin
       	if Flag then
         	PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, UserName, ChannelList[I].Name, 'Вам был запрещен доступ к каналу в связи с вашим отключением от сервера '+SERVER_REMOTE);
       	end;
-  	if IniUsers.ReadInteger('Message', CheckStr(UserName), 2)<>2 then
-    	IniUsers.DeleteKey('Message', CheckStr(UserName));
   except
     on e:Exception do
       PCorePlugin^.onError(PCorePlugin^, e, '--------------KickUserException--------');
@@ -417,7 +401,6 @@ begin
     	Exit;
     end;
     Count := 1;
-    //AddKey:=StrToIntDef(Copy(S,2,Length(S)-1), 0);
     AddKey := StrToDword(Sock.LbRSA1.DecryptStringW(StrToText(Str, P)), Count);
     Count := 1;
     MultKey := StrToDword(Sock.LbRSA1.DecryptStringW(StrToText(Str, P)), Count);
@@ -427,7 +410,6 @@ begin
   {$ELSE}
   else if Str='K' then
   begin
-    //AddKey:=StrToIntDef(Copy(S,2,Length(S)-1), 0);
     Str:=Copy(S,2,Length(S)-1);
     P:=1;
     Ident := StrToDword(Str, P);
@@ -490,13 +472,7 @@ begin
           if not I in [1..16] then
             Exit;
           Channel:=ChannelList[I].Name;
-          //if VUNames.IndexOf(name_prefix+Name)=-1 then // Забанен?
-          //begin
-          //  DataToSend:=WordToStr(LNK_CODE_SERVICE_JOINCHANFAIL)+TextToStr(Name)+WordToStr(I); // сервисное сообщение на другой сервер
-          //  Sock.SendText(DataToSend);
-          //end
-          //else
-            PCorePlugin^.AddChannel(name_prefix+Name+name_postfix,Channel,0,0);
+          PCorePlugin^.AddChannel(name_prefix+Name+name_postfix,Channel,0,0);
         end;
       LNK_CODE_LEFTCHAN:
         begin
@@ -720,16 +696,7 @@ begin
       LNK_CODE_SERVICE_CONNECTION_OK:
         begin
           Name:=StrToText(Str,P);
-          if (IniUsers.ReadInteger('Message', CheckStr(Name), 2)=0) then
-          begin
-            Text:= 'Вы подключены к серверу '+SERVER_REMOTE+'. Вы можете отключиться в любой момент, написав мне "disconnect"'+Chr(13)+Chr(10)+'Список общих каналов:';
-            for I := 1 to 16 do
-              if (ChannelList[I].Name<>'') and ChannelList[I].Permanent then
-                Text:=Text+Chr(13)+Chr(10)+'[url=/channel: '+ChannelList[I].Name+']'+ChannelList[I].Name+'[/url]';
-            Text:=Text+Chr(13)+Chr(10)+Chr(13)+Chr(10)+'Если Вы больше не хотите получать это сообщение, напишите мне "silent"';
-            PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, Name,Text);
-            IniUsers.WriteInteger('Message', CheckStr(Name), 1);
-          end;
+          // Подключение к другому серверу успешно
         end;
 
       LNK_CODE_SERVICE_RESENDMEUSER:
@@ -951,11 +918,6 @@ begin
           	Inc(SendCount);
         	end;
       	end;
-      	{else
-      	begin
-        	DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(0)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
-        	Inc(SendCount);
-      	end;}
   	end;
   	if LastUpdate=0 then
     	DataToSend:=WordToStr(LNK_CODE_BANLIST)+DWordToStr(SendCount)+WordToStr(0)+DataToSend
@@ -1010,8 +972,6 @@ var
 begin
 	if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0) = 0) then
 	begin
-		IniUsers.DeleteKey('Message', CheckStr(User.Name));
-    //User := PCorePlugin^.AskUserInfo(User.Name, DataToSend);
     DataToSend := WordToStr(LNK_CODE_JOIN) + TextToStr(User.Name) + TextToStr(User.IP) + WordToStr(User.sex) + TextToStr(PCorePlugin^.AskID(User.Name));
     Sock.SendText(DataToSend);
   end;
@@ -1091,7 +1051,6 @@ begin
            StrList:=TStringList.Create;
            Ini.ReadSection('Admins', StrList);
            for I := 0 to StrList.Count - 1 do
-             //PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, StrList.Names[I],  'У меня не хватает права управления учетными записями! Не могу удалить учетную запись [i]'+Name+'[/i]!');
              PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, UnCheckStr(StrList.Names[I]),  'Не могу удалить учетную запись [i]'+Name+'[/i], удалите её!');
            StrList.Free;
            Ini.Free;
@@ -1224,11 +1183,6 @@ begin
     Exit;
   end;
   ConnectUser(User);
-  //if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=0) then
-  //begin
-  //  PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для написания приватных сообщений пользователям сервера '+SERVER_REMOTE+' необходимо подключиться к серверу. Напишите мне "connect" для подключения.');
-  //  Exit;
-  //end;
   Index:=SU.ListNames.IndexOf(User.Name);
   if Index<>-1 then
   begin
@@ -1252,11 +1206,6 @@ begin
     Exit;
   end;
   ConnectUser(User);
-  //if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=0) then
-  //begin
-  //  PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для написания приватных сообщений пользователям сервера '+SERVER_REMOTE+' необходимо подключиться к серверу. Напишите мне "connect" для подключения.');
-  //  Exit;
-  //end;
   Index:=SU.ListNames.IndexOf(User.Name);
   if Index<>-1 then
   begin
@@ -1313,23 +1262,9 @@ begin
       end;
       Exit;
     end;
-    if Text='silent' then
-    begin
-      IniUsers.WriteInteger('Message', CheckStr(User.Name), 2);
-      Exit;
-    end;
     if (Text='остановись') and IsAdmin(User.Name) then
     begin
       PCorePlugin^.StopPlugin;
-      Exit;
-    end;
-    if (Text='починись') and IsAdmin(User.Name) then
-    begin
-    	{$IFNDEF Server}
-      if Sock.S.Active then
-      	Sock.S.Close;
-      Sock.S.Open;
-      {$ENDIF}
       Exit;
     end;
     Exit;
@@ -1364,16 +1299,8 @@ begin
   if Num>0 then
   begin
   	ConnectUser(User);
-    //if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=1) then
-    //begin
-      DataToSend:=WordToStr(LNK_CODE_JOINCHAN)+TextToStr(User.Name)+WordToStr(Num);
-      Sock.SendText(DataToSend);
-    //end
-    //else
-    //begin
-    //  PCorePlugin^.AddRestriction(BOT_NAME, 2, 3, 0, KICK_TIME, User.Name, Channel, 'Для доступа к каналу необходимо подключиться к серверу '+SERVER_REMOTE);
-    //  PCorePlugin^.AddPersonalMessage(BOT_NAME, 0, User.Name, 'Для подключения к серверу напишите мне "connect"');
-    //end;
+    DataToSend:=WordToStr(LNK_CODE_JOINCHAN)+TextToStr(User.Name)+WordToStr(Num);
+    Sock.SendText(DataToSend);
   end;
 end;
 
@@ -1401,8 +1328,6 @@ var
   I,K,Len: Cardinal;
   Flag: Boolean;
 begin
-
-  //if Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1) then
   if StrStartsWith(User.Name, name_prefix) and StrEndsWith(User.Name, name_postfix) then
   begin
     VUNames.Add(User.Name);
@@ -1456,8 +1381,6 @@ begin
   if not (Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1)) and
   	not (StrStartsWith(User.Name, name_prefix) and StrEndsWith(User.Name, name_postfix)) then
   begin
-    if IniUsers.ReadInteger('Message', CheckStr(User.Name), 2)<>2 then
-      IniUsers.DeleteKey('Message', CheckStr(User.Name));
     Index:=SU.ListNames.IndexOf(User.Name);
     if Index=-1 then
     begin
@@ -1467,12 +1390,6 @@ begin
     else
       SU.ListNames.Delete(Index);
   end
-  {else if Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1) and Connected then
-  begin
-    DataToSend:=WordToStr(LNK_CODE_BAN)+TextToStr(Copy(User.Name, Length(name_prefix)+1, Length(User.Name)-Length(name_prefix)));
-    Sock.SendText(DataToSend);
-    VUNames.Delete(VUNames.IndexOf(User.Name));
-  end;}
 end;
 
 procedure onUserStatusChanged(User: TUser; Text: String);
@@ -1511,10 +1428,6 @@ begin
           DataToSend:=TextToStr(Copy(Restriction.Name, Length(name_prefix)+1, Length(Restriction.Name)-Length(name_prefix)-Length(name_postfix)))+DoubleToStr(Restriction.Remain)+DWordToStr(Restriction.Ident)+DwordToStr(Restriction.banType)+WordToStr(K-1)+TextToStr(Restriction.moder)+TextToStr(Restriction.Reason);
         end;
       end;
-      {else
-      begin
-        DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(0)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
-      end;}
   if DataToSend<>'' then
   begin
   	DataToSend:=WordToStr(LNK_CODE_BANLIST)+DWordToStr(1)+WordToStr(1)+DataToSend;
@@ -1544,10 +1457,6 @@ begin
           DataToSend:=TextToStr(Copy(Restriction.Name, Length(name_prefix)+1, Length(Restriction.Name)-Length(name_prefix)-Length(name_postfix)))+DWordToStr(Restriction.Ident)+DwordToStr(Restriction.banType)+WordToStr(K-1)+TextToStr(UnBanModerName)+TextToStr(Restriction.Reason);
         end;
       end;
-      {else
-      begin
-        DataToSend:=DataToSend+TextToStr(Copy(Restrictions[I].Name, Length(name_prefix)+1, Length(Restrictions[I].Name)-Length(name_prefix)))+DoubleToStr(Restrictions[I].Remain)+DWordToStr(Restrictions[I].Ident)+DwordToStr(Restrictions[I].banType)+WordToStr(0)+TextToStr(Restrictions[I].moder)+TextToStr(Restrictions[I].Reason);
-      end;}
   if DataToSend<>'' then
   begin
   	DataToSend:=WordToStr(LNK_CODE_UNBAN)+DataToSend;
@@ -1614,7 +1523,6 @@ begin
   SU:=TSendData.Create(Sock);
   Result:=1;
   AddKey:=0;
-  //IniUsers.EraseSection('Message');
   Len:=PCorePlugin^.AskUserChannels(BOT_NAME,Channels);
   for I := 1 to Len do
   begin
