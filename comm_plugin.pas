@@ -236,7 +236,7 @@ begin
   if not Loaded then Exit;
   if User.Name=BOT_NAME then exit;
   try
-  	if VUNames.IndexOf(User.Name)<>-1 then exit;
+  	if VirtUsers.IsVirtualUser(User.Name) then exit;
   	if Assigned(IgnorePrefixList) then
     	for I := 0 to IgnorePrefixList.Count - 1 do
       	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
@@ -264,7 +264,7 @@ begin
   if not Loaded then Exit;
   if User.Name=BOT_NAME then exit;
   try
-  	if VUNames.IndexOf(User.Name)<>-1 then exit;
+  	if VirtUsers.IsVirtualUser(User.Name) then exit;
   	if Assigned(IgnorePrefixList) then
     	for I := 0 to IgnorePrefixList.Count - 1 do
       	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
@@ -290,7 +290,7 @@ var
 begin
   if not Loaded then Exit;
   if User.Name=BOT_NAME then exit;
-  if VUNames.IndexOf(User.Name)<>-1 then exit;
+  if VirtUsers.IsVirtualUser(User.Name) then exit;
   try
     Str:='----onPrivate Exception----'+Chr(13)+Chr(10);
     Link.onPrivate(Name, User, bMessage, regime);
@@ -312,7 +312,7 @@ var
 begin
   if not Loaded then Exit;
   if User.Name=BOT_NAME then exit;
-  if VUNames.IndexOf(User.Name)<>-1 then exit;
+  if VirtUsers.IsVirtualUser(User.Name) then exit;
   try
     Str:='----onPrivateImage Exception----'+Chr(13)+Chr(10);
     Link.onPrivateImg(Name, User, image);
@@ -327,7 +327,7 @@ var
   Str: String;
 begin
   if not Loaded then Exit;
-  if VUNames.IndexOf(User.Name)<>-1 then exit;
+  if VirtUsers.IsVirtualUser(User.Name) then exit;
   try
     Str:='----onPrivate Exception----'+Chr(13)+Chr(10);
     Link.onPersonalMsg(Name, User, bMessage);
@@ -344,7 +344,7 @@ var
 begin
   if not Loaded then Exit;
   try
-  	if VUNames.IndexOf(User.Name)<>-1 then exit;
+  	if VirtUsers.IsVirtualUser(User.Name) then exit;
   	if Assigned(IgnorePrefixList) then
     	for I := 0 to IgnorePrefixList.Count - 1 do
       	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then
@@ -364,7 +364,7 @@ var
 begin
   if not Loaded then Exit;
   try
-  	if VUNames.IndexOf(User.Name)<>-1 then exit;
+  	if VirtUsers.IsVirtualUser(User.Name) then exit;
   	if Assigned(IgnorePrefixList) then
     	for I := 0 to IgnorePrefixList.Count - 1 do
      	 	if Copy(User.Name, 1, Length(IgnorePrefixList.Strings[I]))=IgnorePrefixList.Strings[I] then

@@ -16,7 +16,11 @@ uses
   link in 'link.pas',
   libfunc in 'libfunc.pas',
   libqueue in 'libqueue.pas',
-  LongDataTransfer in 'LongDataTransfer.pas';
+  LongDataTransfer in 'LongDataTransfer.pas',
+  libVirtualUsers in 'libVirtualUsers.pas',
+  SQLite3 in 'SQLite\SQLite3.pas',
+  sqlite3udf in 'SQLite\sqlite3udf.pas',
+  SQLiteWrap in 'SQLite\SQLiteWrap.pas';
 
 {$E cfplug}
 

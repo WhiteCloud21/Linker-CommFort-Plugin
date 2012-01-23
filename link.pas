@@ -8,7 +8,7 @@ uses
   IniFiles,
   Windows, WinInet, SysUtils, Classes, SyncObjs,
   Math, Controls, StdCtrls, ExtCtrls, ComCtrls, Buttons,
-  comm_info, comm_data, libfunc, libqueue, ScktComp, LongDataTransfer, JPEG, LbRSA;
+  comm_info, comm_data, libfunc, libqueue, libVirtualUsers, ScktComp, LongDataTransfer, JPEG, LbRSA;
 
 type
   TLinkSocket = class
@@ -109,7 +109,7 @@ var
   {$IFNDEF Server}
   RC: TReconnect;
   {$ENDIF}
-  VUNames: TStringList;
+  VirtUsers: TConnectedVirtualUsers;
 
   ChannelList: array [1..16] of TChannelInfo;
   WhiteStartList: TStringList;
@@ -196,7 +196,7 @@ begin
       Exit;
     end;
 		ConnS:=Socket;
-		VUNames.Clear;
+		VirtUsers.Clear;
 		SU.TimerBans.Enabled:=False;
 		SU.Timer.Enabled:=False;
 		SU.ListNames.Clear;
@@ -225,7 +225,7 @@ var
   Text: String;
 begin
   try
-    VUNames.Clear;
+    VirtUsers.Clear;
   	SU.TimerBans.Enabled:=False;
     SU.Timer.Enabled:=False;
     SU.ListNames.Clear;
@@ -233,7 +233,7 @@ begin
 
     Count:=PCorePlugin^.AskUsersInChat(Users);
     for I := 1 to Count do
-      if (Users[I].Name<>BOT_NAME) and (VUNames.IndexOf(Users[I].Name)=-1) and (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1) then
+      if (Users[I].Name<>BOT_NAME) and (not VirtUsers.IsVirtualUser (Users[I].Name)) and (IniUsers.ReadInteger('Connect', CheckStr(Users[I].Name), 0)=1) then
         SU.ListNames.Add(Users[I].Name);
     SU.LastUpdate:=0;
     SU.Timer.Enabled:=True;
@@ -269,7 +269,9 @@ end;
 {$IFDEF Server}
 procedure TLinkSocket.ServerSocketClientDisconnect(Sender: TObject;
   Socket: TCustomWinSocket);
-var I: LongInt;
+var
+	I: LongInt;
+  VUNames: TStrings;
 begin
   if (ConnS = Socket) then
   begin
@@ -279,9 +281,11 @@ begin
 			LongDataTransfer.FlushBuffers;
   		SU.Timer.Enabled:=False;
   		SU.ListNames.Clear;
+      VUNames := VirtUsers.GetAllUsers();
   		for I := 0 to VUNames.Count - 1 do
     		PCorePlugin^.LeaveVirtualUser(VUNames[I]);
-  		VUNames.Clear;
+      VUNames.Free;
+      VirtUsers.Clear;
   		SU.TimerBans.Enabled:=False;
   		PCorePlugin^.AddState(BOT_NAME, '');
     except
@@ -293,7 +297,9 @@ end;
 
 {$ELSE}
 procedure TLinkSocket.ClientSocketDisconnect(Sender: TObject; Socket: TCustomWinSocket);
-var I: LongInt;
+var
+	I: LongInt;
+  VUNames: TStrings;
 begin
 	try
 		ConnS:=nil;
@@ -301,9 +307,11 @@ begin
 		LongDataTransfer.FlushBuffers;
 		SU.Timer.Enabled:=False;
 		SU.ListNames.Clear;
-		for I := 0 to VUNames.Count - 1 do
-			PCorePlugin^.LeaveVirtualUser(VUNames[I]);
-		VUNames.Clear;
+    VUNames := VirtUsers.GetAllUsers();
+    for I := 0 to VUNames.Count - 1 do
+      PCorePlugin^.LeaveVirtualUser(VUNames[I]);
+    VUNames.Free;
+    VirtUsers.Clear;
 		SU.TimerBans.Enabled:=False;
 		PCorePlugin^.AddState(BOT_NAME, '');
 	except
@@ -382,6 +390,7 @@ var Code, Icon, BanUT: Word;
     Restrictions:TRestrictions;
     Flag: Boolean;
     ChannelsUpdated: array[1..16] of Boolean;
+    VirtualUser: TConnectedVirtualUser;
 begin
   Code:=0;
   try
@@ -452,18 +461,20 @@ begin
               Pass:=Pass+RandomStr[Random(Length(RandomStr))+1];
             IniUsers.WriteString('Users',CheckStr(Name), Pass);
           end;
-          PCorePlugin^.JoinVirtualUser(name_prefix+Name+name_postfix,Text,0,Pass, Icon, Channel);
+          VirtualUser.Name := Name;
+    			VirtualUser.ServId := 0;
+    			VirtualUser.VirtName := name_prefix+Name+name_postfix;
+    			VirtUsers.Add(VirtualUser);
+          PCorePlugin^.JoinVirtualUser(VirtualUser.VirtName,Text,0,Pass, Icon, Channel);
         end;
       LNK_CODE_LEFT:
         begin
-          Name:=StrToText(Str,P);
-          Index:=VUNames.IndexOf(name_prefix+Name+name_postfix);
-          if Index<>-1 then
-            VUNames.Delete(VUNames.IndexOf(name_prefix+Name+name_postfix));
-          Count:=PCorePlugin^.AskUserChannels(name_prefix+Name+name_postfix, Channels);
+          Name := StrToText(Str,P);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
+          Count:=PCorePlugin^.AskUserChannels(Name, Channels);
           for I := 1 to Count do
-            PCorePlugin^.LeaveChannel(name_prefix+Name+name_postfix, Channels[I].Name);
-          PCorePlugin^.LeaveVirtualUser(name_prefix+Name+name_postfix);
+            PCorePlugin^.LeaveChannel(Name, Channels[I].Name);
+          PCorePlugin^.LeaveVirtualUser(Name);
         end;
       LNK_CODE_JOINCHAN:
         begin
@@ -472,7 +483,8 @@ begin
           if not I in [1..16] then
             Exit;
           Channel:=ChannelList[I].Name;
-          PCorePlugin^.AddChannel(name_prefix+Name+name_postfix,Channel,0,0);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
+          PCorePlugin^.AddChannel(Name, Channel, 0, 0);
         end;
       LNK_CODE_LEFTCHAN:
         begin
@@ -481,7 +493,8 @@ begin
           if not I in [1..16] then
             Exit;
           Channel:=ChannelList[I].Name;
-          PCorePlugin^.LeaveChannel(name_prefix+Name+name_postfix,Channel);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
+          PCorePlugin^.LeaveChannel(Name, Channel);
         end;
       LNK_CODE_CMSG:
         begin
@@ -492,22 +505,24 @@ begin
           Channel:=ChannelList[I].Name;
           Text:=StrToText(Str,P);
           Icon:=StrToWord(Str, P);
-          PCorePlugin^.AddChannel(name_prefix+Name+name_postfix,Channel,0,0);
-          PCorePlugin^.AddMessageToChannel(name_prefix+Name+name_postfix, Channel, Icon, Text);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
+          PCorePlugin^.AddChannel(Name,Channel,0,0);
+          PCorePlugin^.AddMessageToChannel(Name, Channel, Icon, Text);
         end;
       LNK_CODE_CIMG:
         begin
-          Name:=StrToText(Str,P);
+          Name := StrToText(Str,P);
           I:=StrToWord(Str,P);
           if not I in [1..16] then
             Exit;
           Channel:=ChannelList[I].Name;
           Image:=StrToImg(Str,P);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
           if (Image <> nil) then
           begin
           	try
-          		PCorePlugin^.AddChannel(name_prefix+Name+name_postfix,Channel,0,0);
-          		PCorePlugin^.AddImageToChannel(name_prefix+Name+name_postfix, Channel, Image);
+          		PCorePlugin^.AddChannel(Name,Channel,0,0);
+          		PCorePlugin^.AddImageToChannel(Name, Channel, Image);
             finally
             	Image.Free;
             end;
@@ -519,17 +534,19 @@ begin
           Channel:=StrToText(Str,P);
           Text:=StrToText(Str,P);
           Icon:=StrToWord(Str, P);
-          PCorePlugin^.AddPrivateMessage(name_prefix+Name+name_postfix, Icon, Channel, Text);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
+          PCorePlugin^.AddPrivateMessage(Name, Icon, Channel, Text);
         end;
       LNK_CODE_PRIVIMG:
         begin
           Name:=StrToText(Str,P);
           Channel:=StrToText(Str,P);
           Image:=StrToImg(Str,P);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
           if (Image <> nil) then
           begin
           	try
-          		PCorePlugin^.AddPrivateImage(name_prefix+Name+name_postfix, Channel, Image);
+          		PCorePlugin^.AddPrivateImage(Name, Channel, Image);
             finally
             	Image.Free;
             end;
@@ -540,13 +557,15 @@ begin
           Name:=StrToText(Str,P);
           Channel:=StrToText(Str,P);
           Text:=StrToText(Str,P);
-          PCorePlugin^.AddPersonalMessage(name_prefix+Name+name_postfix, 0, Channel, Text);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
+          PCorePlugin^.AddPersonalMessage(Name, 0, Channel, Text);
         end;
       LNK_CODE_STATUSCHNG:
         begin
           Name:=StrToText(Str,P);
           Text:=StrToText(Str,P);
-          PCorePlugin^.AddState(name_prefix+Name+name_postfix, Text);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
+          PCorePlugin^.AddState(Name, Text);
         end;
 
       LNK_CODE_BAN:
@@ -625,11 +644,12 @@ begin
 
       LNK_CODE_SERVICE_UCSCHECK:
         begin
-          Name:=StrToText(Str,P);
-          if VUNames.IndexOf(name_prefix+Name+name_postfix)=-1 then
+          Name := StrToText(Str,P);
+          Name := VirtUsers.GetVirtualUserName(Name, 0);
+          if Name = '' then
             DataToSend:=WordToStr(LNK_CODE_SERVICE_UCSREPLY)+TextToStr(Name)+WordToStr(1)+TextToStr('') // сервисное сообщение на другой сервер
           else
-            DataToSend:=WordToStr(LNK_CODE_SERVICE_UCSREPLY)+TextToStr(Name)+WordToStr(0)+TextToStr(name_prefix+Name+name_postfix); // сервисное сообщение на другой сервер
+            DataToSend:=WordToStr(LNK_CODE_SERVICE_UCSREPLY)+TextToStr(Name)+WordToStr(0)+TextToStr(Name); // сервисное сообщение на другой сервер
           Sock.SendText(DataToSend);
         end;
 
@@ -994,58 +1014,55 @@ end;
 procedure onAuthFail(Name: String; Reason: Integer);
 var
   DataToSend: String;
-  Name2: String;
-  Index: Integer;
+  VirtualUser: TConnectedVirtualUser;
   Ini: TIniFile;
   StrList: TStringList;
   I: Integer;
 begin
-  Index:=VUNames.IndexOf(Name);
-  if Index<>-1 then
-    VUNames.Delete(Index);
-  Name2:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix)-Length(name_postfix));
+	VirtualUser := VirtUsers.GetUserInfo(Name);
+  VirtUsers.Delete(Name);
   case Reason of
      0: // превышено максимальное число подключенных пользователей
        begin
-         DataToSend:=WordToStr(LNK_CODE_SERVICE_MAXUSERLIMIT)+TextToStr(Name2); // сервисное сообщение на другой сервер
+         DataToSend:=WordToStr(LNK_CODE_SERVICE_MAXUSERLIMIT)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
          Sock.SendText(DataToSend);
        end;
      1: // имя не соответствует требованиям (содержит служебные символы, либо превышает максимальную длину в 40 символов)
        begin
-         DataToSend:=WordToStr(LNK_CODE_SERVICE_BADNICK)+TextToStr(Name2); // сервисное сообщение на другой сервер
+         DataToSend:=WordToStr(LNK_CODE_SERVICE_BADNICK)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
          Sock.SendText(DataToSend);
        end;
      2: // бан
        begin
-         DataToSend:=WordToStr(LNK_CODE_SERVICE_BANNED)+TextToStr(Name2); // сервисное сообщение на другой сервер
+         DataToSend:=WordToStr(LNK_CODE_SERVICE_BANNED)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
          Sock.SendText(DataToSend);
        end;
      3: // имя содержит запрещенные слова (не проходит фильтр плохих слов)
        begin
-         DataToSend:=WordToStr(LNK_CODE_SERVICE_NICKDENIED)+TextToStr(Name2); // сервисное сообщение на другой сервер
+         DataToSend:=WordToStr(LNK_CODE_SERVICE_NICKDENIED)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
          Sock.SendText(DataToSend);
        end;
      4: // схожее по написанию имя уже зарегистрировано
        begin
-         DataToSend:=WordToStr(LNK_CODE_SERVICE_NICKLEXISTS)+TextToStr(Name2); // сервисное сообщение на другой сервер
+         DataToSend:=WordToStr(LNK_CODE_SERVICE_NICKLEXISTS)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
          Sock.SendText(DataToSend);
        end;
      5: // превышено максимальное число учетных записей с данного IP-адреса
        begin
-         DataToSend:=WordToStr(LNK_CODE_SERVICE_MAXNICKLIMIT)+TextToStr(Name2); // сервисное сообщение на другой сервер
+         DataToSend:=WordToStr(LNK_CODE_SERVICE_MAXNICKLIMIT)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
          Sock.SendText(DataToSend);
        end;
      7: // неверный пароль
        begin
          if PCorePlugin^.AskRight(BOT_NAME, 1, '')=1 then
          begin
-           PCorePlugin^.AddPassword(BOT_NAME, Name, 0, IniUsers.ReadString('Users',CheckStr(Name2),''));
-           DataToSend:=WordToStr(LNK_CODE_SERVICE_RESENDMEUSER)+TextToStr(Name2); // сервисное сообщение на другой сервер
+           PCorePlugin^.AddPassword(BOT_NAME, Name, 0, IniUsers.ReadString('Users',CheckStr(VirtualUser.Name),''));
+           DataToSend:=WordToStr(LNK_CODE_SERVICE_RESENDMEUSER)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
            Sock.SendText(DataToSend);
          end
          else
          begin
-           DataToSend:=WordToStr(LNK_CODE_SERVICE_CANNOTCONNECT)+TextToStr(Name2); // сервисное сообщение на другой сервер
+           DataToSend:=WordToStr(LNK_CODE_SERVICE_CANNOTCONNECT)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
            Sock.SendText(DataToSend);
            Ini:=TIniFile.Create(file_config);
            StrList:=TStringList.Create;
@@ -1061,12 +1078,12 @@ begin
          if PCorePlugin^.AskRight(BOT_NAME, 2, '')=1 then
          begin
            PCorePlugin^.ActivateUser(BOT_NAME, Name);
-           DataToSend:=WordToStr(LNK_CODE_SERVICE_RESENDMEUSER)+TextToStr(Name2); // сервисное сообщение на другой сервер
+           DataToSend:=WordToStr(LNK_CODE_SERVICE_RESENDMEUSER)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
            Sock.SendText(DataToSend);
          end
          else
          begin
-           DataToSend:=WordToStr(LNK_CODE_SERVICE_CANNOTCONNECT)+TextToStr(Name2); // сервисное сообщение на другой сервер
+           DataToSend:=WordToStr(LNK_CODE_SERVICE_CANNOTCONNECT)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
            Sock.SendText(DataToSend);
            Ini:=TIniFile.Create(file_config);
            StrList:=TStringList.Create;
@@ -1135,6 +1152,7 @@ var
   DataToSend: String;
   Index: Integer;
   StrList: TStringList;
+  VirtualUser : TConnectedVirtualUser;
 begin
   if Name=BOT_NAME then
   begin
@@ -1191,8 +1209,8 @@ begin
     DataToSend:=WordToStr(LNK_CODE_JOIN)+TextToStr(User.Name)+TextToStr(User.IP)+WordToStr(User.sex)+TextToStr(PCorePlugin^.AskID(User.Name));
     Sock.SendText(DataToSend);
   end;
-  Name:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix)-Length(name_postfix));
-  DataToSend:=WordToStr(LNK_CODE_PRIV)+TextToStr(User.Name)+TextToStr(Name)+TextToStr(Text)+WordToStr(Regime);
+  VirtualUser := VirtUsers.GetUserInfo(Name);
+  DataToSend:=WordToStr(LNK_CODE_PRIV)+TextToStr(User.Name)+TextToStr(VirtualUser.Name)+TextToStr(Text)+WordToStr(Regime);
   Sock.SendText(DataToSend);
 end;
 
@@ -1200,6 +1218,7 @@ procedure onPrivateImg(Name: String; User: TUser; Image: TJpegImage);
 var
   DataToSend: String;
   Index: LongInt;
+  VirtualUser : TConnectedVirtualUser;
 begin
   if Name=BOT_NAME then
   begin
@@ -1214,8 +1233,8 @@ begin
     DataToSend:=WordToStr(LNK_CODE_JOIN)+TextToStr(User.Name)+TextToStr(User.IP)+WordToStr(User.sex)+TextToStr(PCorePlugin^.AskID(User.Name));
     Sock.SendText(DataToSend);
   end;
-  Name:=Copy(Name,Length(name_prefix)+1, Length(Name)-Length(name_prefix)-Length(name_postfix));
-  DataToSend:=WordToStr(LNK_CODE_PRIVIMG)+TextToStr(User.Name)+TextToStr(Name)+ImgToStr(Image);
+  VirtualUser := VirtUsers.GetUserInfo(Name);
+  DataToSend:=WordToStr(LNK_CODE_PRIVIMG)+TextToStr(User.Name)+TextToStr(VirtualUser.Name)+ImgToStr(Image);
   Sock.SendText(DataToSend);
 end;
 
@@ -1327,10 +1346,11 @@ var
   Channels: TChannels;
   I,K,Len: Cardinal;
   Flag: Boolean;
+  VirtualUser : TConnectedVirtualUser;
 begin
-  if StrStartsWith(User.Name, name_prefix) and StrEndsWith(User.Name, name_postfix) then
+  VirtualUser := VirtUsers.GetUserInfo(User.Name);
+  if VirtualUser.Name <> '' then
   begin
-    VUNames.Add(User.Name);
     Len:=PCorePlugin^.AskUserChannels(User.Name,Channels);
     for I := 1 to Len do
     begin
@@ -1341,7 +1361,7 @@ begin
       if not Flag then
         PCorePlugin^.LeaveChannel(User.Name, Channels[I].Name);
     end;
-    DataToSend:=WordToStr(LNK_CODE_SERVICE_CONNECTION_OK)+TextToStr(Copy(User.Name, Length(name_prefix)+1,Length(User.Name)-Length(name_prefix)-Length(name_postfix)));
+    DataToSend:=WordToStr(LNK_CODE_SERVICE_CONNECTION_OK)+TextToStr(VirtualUser.Name);
     Sock.SendText(DataToSend);
   end
   else if User.Name=BOT_NAME then
@@ -1378,8 +1398,7 @@ var
   DataToSend: String;
   Index: LongInt;
 begin
-  if not (Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1)) and
-  	not (StrStartsWith(User.Name, name_prefix) and StrEndsWith(User.Name, name_postfix)) then
+  if not (Assigned(VirtUsers) and VirtUsers.IsVirtualUser(User.Name)) then
   begin
     Index:=SU.ListNames.IndexOf(User.Name);
     if Index=-1 then
@@ -1390,13 +1409,15 @@ begin
     else
       SU.ListNames.Delete(Index);
   end
+  else
+  	VirtUsers.Delete(User.Name);
 end;
 
 procedure onUserStatusChanged(User: TUser; Text: String);
 var
   DataToSend: String;
 begin
-  if not (Assigned(VUNames) and (VUNames.IndexOf(User.Name)<>-1)) then
+  if not (Assigned(VirtUsers) and VirtUsers.IsVirtualUser(User.Name)) then
   begin
     if (IniUsers.ReadInteger('Connect', CheckStr(User.Name), 0)=1) then
     begin
@@ -1515,7 +1536,7 @@ var
 begin
   Connected:=False;
   IniUsers:=TIniFile.Create(file_users);
-  VUNames:=TStringList.Create;
+  VirtUsers := TConnectedVirtualUsers.Create;
   Sock:=TLinkSocket.Create;
   {$IFNDEF Server}
   RC:=TReconnect.Create(Sock);
@@ -1553,6 +1574,7 @@ begin
   {$ENDIF}
   Sock.Free;
   IniUsers.Free;
+  VirtUsers.Free;
   Connected:=False;
   LongDataTransfer.FlushBuffers;
 end;

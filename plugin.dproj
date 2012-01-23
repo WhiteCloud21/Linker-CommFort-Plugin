@@ -56,7 +56,12 @@
 			<DCCReference Include="libfunc.pas"/>
 			<DCCReference Include="libqueue.pas"/>
 			<DCCReference Include="LongDataTransfer.pas"/>
+			<DCCReference Include="libVirtualUsers.pas"/>
+			<DCCReference Include="SQLite\SQLite3.pas"/>
+			<DCCReference Include="SQLite\sqlite3udf.pas"/>
+			<DCCReference Include="SQLite\SQLiteWrap.pas"/>
 			<None Include="ModelSupport_plugin\default.txaPackage"/>
+			<None Include="plugin.inc"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
