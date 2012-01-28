@@ -20,7 +20,11 @@ uses
   libVirtualUsers in 'libVirtualUsers.pas',
   SQLite3 in 'SQLite\SQLite3.pas',
   sqlite3udf in 'SQLite\sqlite3udf.pas',
-  SQLiteWrap in 'SQLite\SQLiteWrap.pas';
+  SQLiteWrap in 'SQLite\SQLiteWrap.pas',
+  MessageDigest_5 in 'utils\MessageDigest_5.pas',
+  libmd5 in 'utils\libmd5.pas',
+  libClasses in 'utils\libClasses.pas',
+  libSync in 'libSync.pas';
 
 {$E cfplug}
 

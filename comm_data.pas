@@ -163,6 +163,8 @@ const
   LNK_CODE_STATUSCHNG           = 40;
 
   LNK_CODE_BAN                  = 100;
+  LNK_CODE_OWNERSHIP_CHECK      = 200;
+  LNK_CODE_CHANGE_PASS		      = 210;
 
   LNK_CODE_BANLIST              = 1001;
   LNK_CODE_UNBAN 	 	            = 1010;
@@ -171,6 +173,7 @@ const
 
   LNK_CODE_SERVICE_UCSCHECK     = 15011;
   LNK_CODE_SERVICE_UCSREPLY     = 15012;
+  LNK_CODE_SERVICE_MESSAGE	    = 15101;
 
   LNK_CODE_SERVICE_BADNICK      = 20001;
   LNK_CODE_SERVICE_BANNED       = 20002;
@@ -191,7 +194,7 @@ const
   LNK_CODE_SERVICE_CLOSECHANNEL = 20511;
 
   PLU_VER  = '0.1.0';
-  PROTOCOL_VER : DWord = 3;
+  PROTOCOL_VER : DWord = 4;
 
   {$IFDEF Server}
   PLU_NAME = 'Линковщик серверов '+PLU_VER+' (сервер)';
@@ -205,6 +208,7 @@ var
   BOT_PASS: String;
   BOT_ISFEMALE: Byte;
   BOT_IP: String;
+  TEMP_PATH:String;
 
   CONNECT_IP: String;
   CONNECT_PORT: Word;
@@ -216,16 +220,13 @@ var
 
   StartKey, MultKey, AddKey: Integer;
 
-  name_prefix: String;
-  name_postfix: String;
+  server_id: String;
   config_dir:String;
 
   file_debug: String;
   file_log: String;
   file_config: String;
   file_users: String;
-
-  IniUsers: TIniFile;
 
 implementation
 

@@ -66,6 +66,7 @@ type
       function AskUsersInChat(var UserList: TUsers):DWord;
       function AskRestrictions(var RestList: TRestrictions):DWord;
       function AskIPState(Name: String):DWord;
+      function AskPassword(Name: String):String;
       function AskIP(Name: String):String;
       function AskID(Name: String):String;
       procedure AskMaxImageSize(channel: String; var ByteSize: DWord; var PixelSize: DWord);
@@ -946,6 +947,7 @@ begin
   CommFortGetData(dwPluginID, GD_PLUGIN_TEMPPATH, Buf, iSize, nil, 0);
   CopyMemory(@iSize, @Buf[0], 4);
   Result:=TEncoding.Unicode.GetString(Buf, 4, iSize*2);
+  TEMP_PATH := Result;
 end;
 
 function TCommPluginC.AskUserChannels(Name: String; var ChannelList: TChannels):DWord;
@@ -1115,6 +1117,24 @@ begin
   SetLength(Buf, iSize);
   CommFortGetData(dwPluginID, GD_RESTRICTIONS_GET, Buf, iSize, nil, 0);
   CopyMemory(@Result, @Buf[0], 4);
+end;
+
+function TCommPluginC.AskPassword(Name: String):String;
+var
+  msg: TMemoryStream;
+  Buf: TBytes;
+  iSize: DWord;
+begin
+  msg := TMemoryStream.Create;
+  iSize:= Length (Name);
+  msg.WriteBuffer(iSize, 4);
+  msg.WriteBuffer(PChar(Name)^, iSize*2);
+
+  iSize := CommFortGetData(dwPluginID, GD_PASSWORD_GET, nil, 0, msg.Memory, msg.Size);
+  SetLength(Buf, iSize);
+  CommFortGetData(dwPluginID, GD_PASSWORD_GET, Buf, iSize, msg.Memory, msg.Size);
+  Result:=TEncoding.Unicode.GetString(Buf, 4, Dword(Buf[0])*2);
+  msg.Free;
 end;
 
 function TCommPluginC.AskIP(Name: String):String;

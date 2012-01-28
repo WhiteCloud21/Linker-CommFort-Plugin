@@ -60,6 +60,13 @@
 			<DCCReference Include="SQLite\SQLite3.pas"/>
 			<DCCReference Include="SQLite\sqlite3udf.pas"/>
 			<DCCReference Include="SQLite\SQLiteWrap.pas"/>
+			<DCCReference Include="utils\MessageDigest_5.pas"/>
+			<DCCReference Include="utils\libmd5.pas"/>
+			<DCCReference Include="utils\libClasses.pas"/>
+			<DCCReference Include="libSync.pas"/>
+			<DCCReference Include="c:\program files (x86)\codegear\rad studio\6.0\source\Win32\soap\wsdlimporter\MessageDigest_5.pa"/>
+			<DCCReference Include="c:\program files (x86)\codegear\rad studio\6.0\source\Win32\soap\wsdlimporter\MessageDigest_5.p"/>
+			<DCCReference Include="c:\program files (x86)\codegear\rad studio\6.0\source\Win32\soap\wsdlimporter\MessageDigest_5"/>
 			<None Include="ModelSupport_plugin\default.txaPackage"/>
 			<None Include="plugin.inc"/>
 			<BuildConfiguration Include="Base">
