@@ -13,6 +13,8 @@ uses
 
 type
   TLinkSocket = class
+    private
+      ReceiveDataCriticalSection: TCriticalSection;
     public
       {$IFDEF Server}
       S: TServerSocket;
@@ -124,6 +126,7 @@ implementation
 constructor TLinkSocket.Create();
 begin
   try
+  	ReceiveDataCriticalSection := TCriticalSection.Create;
     {$IFDEF Server}
     S:=TServerSocket.Create(nil);
     S.OnAccept:=ServerSocketAccept;
@@ -157,6 +160,7 @@ begin
     FreeAndNil(LbRSA1);
     ConnS:=nil;
     Connected := False;
+    ReceiveDataCriticalSection.Free;
   end;
 end;
 
@@ -175,7 +179,12 @@ end;
 procedure TLinkSocket.SocketRead(Sender: TObject;
   Socket: TCustomWinSocket);
 begin
-  ReceiveLongText(Socket,ProcessData);
+	ReceiveDataCriticalSection.Enter;
+  try
+  	ReceiveLongText(Socket,ProcessData);
+  finally
+  	ReceiveDataCriticalSection.Leave;
+  end;
 end;
 
 {$IFDEF Server}
@@ -234,7 +243,9 @@ begin
 
     Count:=PCorePlugin^.AskUsersInChat(Users);
     for I := 1 to Count do
-      if (Users[I].Name<>BOT_NAME) and not VirtUsers.IsOtherPluginVirtualUser(Users[I].Name) and (not VirtUsers.IsVirtualUser (Users[I].Name))then
+      if (Users[I].Name<>BOT_NAME) and not VirtUsers.IsOtherPluginVirtualUser(Users[I].Name) and (not VirtUsers.IsVirtualUser (Users[I].Name))
+      	and not StrEndsWith(Users[I].Name, '[Lk]') and not StrEndsWith(Users[I].Name, '[Lk2]')
+    		and not StrEndsWith(Users[I].Name, '[Lk3]') and not StrEndsWith(Users[I].Name, '[Lk4]') then
         SU.ListNames.Add(Users[I].Name);
     SU.LastUpdate:=0;
     SU.Timer.Enabled:=True;
@@ -450,10 +461,10 @@ begin
       LNK_CODE_JOIN:
         begin
           SavedVirtUser.Name:=StrToText(Str,P);
+					if StrEndsWith(SavedVirtUser.Name, '[Lk]') or StrEndsWith(SavedVirtUser.Name, '[Lk2]')
+    				or StrEndsWith(SavedVirtUser.Name, '[Lk3]') or StrEndsWith(SavedVirtUser.Name, '[Lk4]') then
+      				Exit;
           SavedVirtUser.ServId := server_id;
-          if StrEndsWith(SavedVirtUser.Name, '[Lk]') or StrEndsWith(SavedVirtUser.Name, '[Lk2]')
-          	or StrEndsWith(SavedVirtUser.Name, '[Lk3]') or StrEndsWith(SavedVirtUser.Name, '[Lk4]') then
-            	Exit;
           Text:=StrToText(Str,P); //IP
           Icon:=StrToWord(Str, P);
           Channel:=StrToText(Str, P); //CompID
@@ -470,16 +481,23 @@ begin
             	SavedVirtUser.VirtName := SavedVirtUser.Name + '['+SavedVirtUser.ServId+']';
               Pass := PCorePlugin^.AskPassword(SavedVirtUser.VirtName);
             end;
-            SavedVirtUser.VirtName := SavedVirtUser.VirtName;
             UsersDatabase.Add(SavedVirtUser);
           end
           else
           	Pass := PCorePlugin^.AskPassword(SavedVirtUser.VirtName);
+          Ident := 1;
           if Pass='' then
+          begin
           	for I := 0 to Random(5)+15 do
             	Pass:=Pass+RandomStr[Random(Length(RandomStr))+1];
-          VirtUsers.AddTemp(SavedVirtUser.Name, 0, SavedVirtUser.VirtName);
-          PCorePlugin^.JoinVirtualUser(SavedVirtUser.VirtName, Text, 1,Pass, Icon, Channel);
+            Ident := 0;
+          end;
+          try
+          	VirtUsers.AddTemp(SavedVirtUser.Name, 0, SavedVirtUser.VirtName);
+          	PCorePlugin^.JoinVirtualUser(SavedVirtUser.VirtName, Text, Ident,Pass, Icon, Channel);
+          except
+            // Уже в списке входа, но не вошел
+          end;
         end;
       LNK_CODE_LEFT:
         begin
@@ -877,7 +895,7 @@ begin
   try
     Timer:=TTimer.Create(nil);
     Timer.OnTimer:=Send;
-    Timer.Interval:=3000;
+    Timer.Interval:=6000;
     TimerBans:=TTimer.Create(nil);
     TimerBans.OnTimer:=SendBans;
     TimerBans.Interval:=60000;
@@ -1089,7 +1107,7 @@ begin
         DataToSend:=WordToStr(LNK_CODE_SERVICE_RESENDMEUSER)+TextToStr(VirtualUser.Name); // сервисное сообщение на другой сервер
         Sock.SendText(DataToSend);
        end;
-     6,8: // заявка на активацию успешно отправлена; заявка на активацию не обработана, либо отклонена
+     6, 8: //заявка на активацию не обработана, либо отклонена
        begin
          if PCorePlugin^.AskRight(BOT_NAME, 2, '')=1 then
          begin

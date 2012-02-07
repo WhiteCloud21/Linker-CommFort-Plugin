@@ -169,7 +169,8 @@ begin
   Result.Name := '';
   Result.ServId := -1;
   Result.VirtName := '';
-  tempTable := database.GetTable('SELECT name, servId FROM virtUser WHERE virtName = :VirtName LIMIT 1');
+  tempTable := database.GetTable('SELECT name, servId FROM virtUser WHERE virtName = :VirtName '+
+  	'UNION SELECT name, servId FROM tempVU WHERE virtName = :VirtName LIMIT 1');
   if not tempTable.EOF then
   begin
     Result.Name := tempTable.FieldAsString(0);
@@ -242,20 +243,18 @@ end;
 function TUsersDatabase.GetUserInfos(VirtName: String) : TAutoFreeVirtUsersList;
 var
   tempTable: TSQLiteTable;
-  VirtualUser: TVirtualUser;
+  VirtualUser: PVirtualUser;
 begin
   Result := TAutoFreeVirtUsersList.Create;
   database.AddParamText(':VirtName', VirtName);
-  VirtualUser.Name := '';
-  VirtualUser.ServId := '';
-  VirtualUser.VirtName := '';
   tempTable := database.GetTable('SELECT name, servId FROM virtUser WHERE virtName = :VirtName');
   while not tempTable.EOF do
   begin
-    VirtualUser.Name := tempTable.FieldAsString(0);
-    VirtualUser.ServId := tempTable.FieldAsString(1);
-    VirtualUser.VirtName := VirtName;
-    Result.Add(@VirtualUser);
+  	New(VirtualUser);
+    VirtualUser^.Name := tempTable.FieldAsString(0);
+    VirtualUser^.ServId := tempTable.FieldAsString(1);
+    VirtualUser^.VirtName := VirtName;
+    Result.Add(VirtualUser);
     tempTable.Next;
   end;
   tempTable.Free;

@@ -92,7 +92,7 @@ procedure CallSFunc(MySProc: TMySProc; Str: AnsiString); inline;
 var
 	CallStr: String;
 begin
-	SetLength(CallStr, Length(Str));
+	SetLength(CallStr, Length(Str) div 2);
   CopyMemory(@CallStr[1], @Str[1], Length(Str));
   MySProc(CallStr);
 end;
@@ -114,11 +114,14 @@ else begin
 	RDSize:=length(S);
 end;
 //PCorePlugin^.WriteLog(file_debug, 'Packet: '+IntToStr(RDSize)+' '+IntToStr(InputReceivedSize)+' '+IntToStr(InputDataSize));
+if InputDataSize > 500000 then
+	PCorePlugin^.WriteLog(file_debug, 'Warning: Packet: '+IntToStr(RDSize)+' '+IntToStr(InputReceivedSize)+' '+IntToStr(InputDataSize));
 If (Length(InputBuf)>0) and (InputDataSize = 0) then begin //Корректировка, в том случае
 	S:=InputBuf+S; //если фрагментирован сам заголовок
 	FlushBuffers; //блока данных
+  RDSize:=length(S);
 end;
-If InputBuf='' then
+If InputDataSize=0 then
 	begin //Самый первый пакет;
   	// Фрагмент заголовка
   	if Length(S) < 4 then

@@ -40,6 +40,9 @@ procedure TPluginSync.Add(item: String);
 begin
 	database.AddParamText(':Name', pluginName);
 	database.AddParamText(':Item', item);
+  database.ExecSQL('DELETE FROM sync WHERE pluginName = :Name AND item = :Item');
+	database.AddParamText(':Name', pluginName);
+	database.AddParamText(':Item', item);
   database.ExecSQL('INSERT INTO sync (pluginName, item) VALUES (:Name, :Item)');
 end;
 

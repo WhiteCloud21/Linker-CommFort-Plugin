@@ -633,10 +633,10 @@ begin
 	msg := TMemoryStream.Create;
 	len:=Length(Name);
 	msg.WriteBuffer(len, 4);
-	msg.WriteBuffer(Name[1], len*2);
+	msg.WriteBuffer(PChar(Name)^, len*2);
 	len:=Length(Channel);
 	msg.WriteBuffer(len, 4);
-	msg.WriteBuffer(Channel[1], len*2);
+	msg.WriteBuffer(PChar(Channel)^, len*2);
 	stream:=TMemoryStream.Create;
 	image.SaveToStream(stream);
 	len:=stream.Size;
@@ -675,10 +675,10 @@ begin
 	msg := TMemoryStream.Create;
 	len:=Length(Name);
 	msg.WriteBuffer(len, 4);
-	msg.WriteBuffer(Name[1], len*2);
+	msg.WriteBuffer(PChar(Name)^, len*2);
 	len:=Length(User);
 	msg.WriteBuffer(len, 4);
-	msg.WriteBuffer(User[1], len*2);
+	msg.WriteBuffer(PChar(User)^, len*2);
 	stream:=TMemoryStream.Create;
 	image.SaveToStream(stream);
 	len:=stream.Size;
@@ -957,20 +957,25 @@ var
   I: DWord;
   J: Word;
 begin
-      len:=Length(Name)*2+4;
-      SetLength(msg, len);
-      len:=Length(Name);
-      CopyMemory(@msg[0], @len, 4);
-      CopyMemory(@msg[4], PChar(Name), len*2);
-      i:=4+len*2;
-      iSize := CommFortGetData(dwPluginID, GD_USERCHANNELS_GET, nil, 0, @msg[0], i);
-      SetLength(Buf, iSize);
-      if iSize=0 then
-      begin
-        Result:=0;
-        Exit;
-      end;
-      CommFortGetData(dwPluginID, GD_USERCHANNELS_GET, Buf, iSize, @msg[0], i);
+	if (Length(Name) = 0) then
+  begin
+  	Result := 0;
+    Exit;
+  end;
+	len:=Length(Name)*2+4;
+  SetLength(msg, len);
+  len:=Length(Name);
+  CopyMemory(@msg[0], @len, 4);
+  CopyMemory(@msg[4], PChar(Name), len*2);
+  i:=4+len*2;
+  iSize := CommFortGetData(dwPluginID, GD_USERCHANNELS_GET, nil, 0, @msg[0], i);
+  SetLength(Buf, iSize);
+  if iSize=0 then
+  begin
+  	Result:=0;
+    Exit;
+  end;
+  CommFortGetData(dwPluginID, GD_USERCHANNELS_GET, Buf, iSize, @msg[0], i);
   CopyMemory(@Result, @Buf[0], 4);
   I:=4;
   setLength(ChannelList, Result + 1);
