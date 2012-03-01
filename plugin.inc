@@ -1,1 +1,1 @@
-{$DEFINE Server}
+{$DEFINE Client}

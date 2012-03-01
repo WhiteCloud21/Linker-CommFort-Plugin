@@ -64,6 +64,8 @@
 			<DCCReference Include="utils\libmd5.pas"/>
 			<DCCReference Include="utils\libClasses.pas"/>
 			<DCCReference Include="libSync.pas"/>
+			<DCCReference Include="LinkSocket.pas"/>
+			<DCCReference Include="linkData.pas"/>
 			<DCCReference Include="c:\program files (x86)\codegear\rad studio\6.0\source\Win32\soap\wsdlimporter\MessageDigest_5.pa"/>
 			<DCCReference Include="c:\program files (x86)\codegear\rad studio\6.0\source\Win32\soap\wsdlimporter\MessageDigest_5.p"/>
 			<DCCReference Include="c:\program files (x86)\codegear\rad studio\6.0\source\Win32\soap\wsdlimporter\MessageDigest_5"/>

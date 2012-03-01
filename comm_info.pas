@@ -1191,12 +1191,12 @@ begin
   msg.WriteString(Name);
   iSize := CommFortGetData(dwPluginID, GD_USERINFO_GET, nil, 0, PChar(msg.DataString), 4+Length(Name)*2);
   Result.IP:='UNCONNECTED';
+  Result.Name:=Name;
   if iSize>0 then
   begin
     SetLength(Buf, iSize);
     CommFortGetData(dwPluginID, GD_USERINFO_GET, Buf, iSize, PChar(msg.DataString), 4+Length(Name)*2);
     iSize:=4+Dword(Buf[0])*2;
-    Result.Name:=Name;
     Result.IP:=TEncoding.Unicode.GetString(Buf, iSize+4, Dword(Buf[iSize])*2);
     iSize:=iSize+4+Dword(Buf[iSize])*2;
     iSize:=iSize+4+Dword(Buf[iSize])*2;

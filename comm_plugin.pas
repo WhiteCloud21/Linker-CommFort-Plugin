@@ -7,7 +7,7 @@ uses Windows,
       comm_data,
       IniFiles, WinInet,
       SysUtils, Classes, Math, ShellAPI, JPEG,
-      link,
+      linkData, link,
       libfunc;
   
 type

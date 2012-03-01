@@ -3,6 +3,7 @@
 }
 // JCL_DEBUG_EXPERT_GENERATEJDBG ON
 // JCL_DEBUG_EXPERT_INSERTJDBG ON
+
 library link_plugin;
 
 uses
@@ -24,7 +25,9 @@ uses
   MessageDigest_5 in 'utils\MessageDigest_5.pas',
   libmd5 in 'utils\libmd5.pas',
   libClasses in 'utils\libClasses.pas',
-  libSync in 'libSync.pas';
+  libSync in 'libSync.pas',
+  LinkSocket in 'LinkSocket.pas',
+  linkData in 'linkData.pas';
 
 {$E cfplug}
 
