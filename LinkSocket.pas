@@ -374,7 +374,7 @@ begin
   try
     Timer:=TTimer.Create(nil);
     Timer.OnTimer:=Send;
-    Timer.Interval:=6000;
+    Timer.Interval:=users_packet_interval;
     TimerBans:=TTimer.Create(nil);
     TimerBans.OnTimer:=SendBans;
     TimerBans.Interval:=60000;
@@ -410,8 +410,8 @@ begin
   try
   	if ListNames.Count>0 then
   	begin
-    	if ListNames.Count>20 then
-      	SendCount:= 20
+    	if ListNames.Count>users_per_packet then
+      	SendCount:= users_per_packet
     	else
       	SendCount:= ListNames.Count;
     	for I := 0 to SendCount - 1 do

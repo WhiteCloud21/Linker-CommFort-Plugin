@@ -20,6 +20,8 @@ var
 
   server_id: String;
   vu_ip: String;
+  users_per_packet: Integer;
+  users_packet_interval: Integer;
 
 implementation
 

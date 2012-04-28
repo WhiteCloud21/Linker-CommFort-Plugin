@@ -1048,6 +1048,16 @@ begin
   SERVER_LOCAL:=Ini.ReadString('Linker', 'ServerName', 'MyServer');
   server_id := Ini.ReadString('Linker', 'ServId', 'Serv');
   vu_ip := Ini.ReadString('Linker', 'VUIP', '');
+  users_per_packet := Ini.ReadInteger('Perfomance', 'UsersPerPacket', 20);
+  if (users_per_packet < 1) then
+  	users_per_packet := 1
+  else if (users_per_packet > 30) then
+  	users_per_packet := 30;
+  users_packet_interval := Ini.ReadInteger('Perfomance', 'UsersPacketInterval', 6000);
+  if (users_packet_interval < 1000) then
+  	users_packet_interval := 1000
+  else if (users_packet_interval > 600000) then
+  	users_packet_interval := 600000;
   if not Length(server_id) in [1..4] then
   	server_id := 'Serv';
   StartKey:=Ini.ReadInteger('Keys', 'MainKey', 0);
